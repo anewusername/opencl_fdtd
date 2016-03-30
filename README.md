@@ -32,3 +32,11 @@ You can install the requirements and their dependencies easily with
 ```bash
 pip intall -r requirements.txt
 ```
+
+## Running
+The root directory contains ``fdtd.py``, which sets up and runs a sample simulation
+ (cavity ringdown).
+
+```bash
+python3 fdtd.py
+```
