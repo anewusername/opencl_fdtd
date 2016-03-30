@@ -1,0 +1,6 @@
+numpy
+h5py
+pyopencl
+-e git+https://mpxd.net/gogs/jan/float_raster.git@release#egg=float_raster
+-e git+https://mpxd.net/gogs/jan/gridlock.git@release#egg=gridlock
+-e git+https://mpxd.net/gogs/jan/masque.git@release#egg=masque
