@@ -35,7 +35,7 @@ git clone https://mpxd.net/gogs/jan/opencl-fdtd.git
 
 You can install the requirements and their dependencies easily with
 ```bash
-pip intall -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Running
