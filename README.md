@@ -28,6 +28,11 @@ simulations on parallel compute hardware (mainly GPUs).
 * [gridlock](https://mpxd.net/gogs/jan/gridlock)
 * [masque](https://mpxd.net/gogs/jan/masque)
 
+To get these files, just clone this repository:
+```bash
+git clone https://mpxd.net/gogs/jan/opencl-fdtd.git
+```
+
 You can install the requirements and their dependencies easily with
 ```bash
 pip intall -r requirements.txt
