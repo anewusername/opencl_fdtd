@@ -1,7 +1,7 @@
 # opencl-fdtd
 
-**opencl-fdtd** is a python package for running 3D time-domain electromagnetic
-simulations on parallel compute hardware (mainly GPUs).
+**opencl-fdtd** is a python application for running 3D time-domain
+electromagnetic simulations on parallel compute hardware (mainly GPUs).
 
 **Performance** highly depends on what hardware you have available:
 * A 395x345x73 cell simulation (~10 million points, 8-cell absorbing boundaries)
@@ -28,7 +28,7 @@ simulations on parallel compute hardware (mainly GPUs).
 * [gridlock](https://mpxd.net/gogs/jan/gridlock)
 * [masque](https://mpxd.net/gogs/jan/masque)
 
-To get these files, just clone this repository:
+To get the code, just clone this repository:
 ```bash
 git clone https://mpxd.net/gogs/jan/opencl-fdtd.git
 ```
