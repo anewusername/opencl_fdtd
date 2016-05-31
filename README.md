@@ -13,7 +13,7 @@ electromagnetic simulations on parallel compute hardware (mainly GPUs).
 **Capabilities** are currently pretty minimal:
 * Absorbing boundaries (CPML)
 * Conducting boundaries (PMC)
-* Anisotropic media (eps_xx, eps_yy, eps_zz)
+* Anisotropic media (eps_xx, eps_yy, eps_zz, mu_xx, ...)
 * Direct access to fields (eg., you can trivially add a soft or hard
  current source with just sim.E[1] += sin(f0 * t), or save any portion
  of a field to a file)
@@ -30,7 +30,7 @@ electromagnetic simulations on parallel compute hardware (mainly GPUs).
 
 To get the code, just clone this repository:
 ```bash
-git clone https://mpxd.net/gogs/jan/opencl-fdtd.git
+git clone https://mpxd.net/gogs/jan/opencl_fdtd.git
 ```
 
 You can install the requirements and their dependencies easily with
