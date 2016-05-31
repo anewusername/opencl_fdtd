@@ -1,6 +1,6 @@
-# opencl-fdtd
+# opencl_fdtd
 
-**opencl-fdtd** is a python application for running 3D time-domain
+**opencl_fdtd** is a python application for running 3D time-domain
 electromagnetic simulations on parallel compute hardware (mainly GPUs).
 
 **Performance** highly depends on what hardware you have available:
