@@ -70,6 +70,3 @@ def type_to_C(float_type: numpy.float32 or numpy.float64) -> str:
     else:
         raise Exception('Unsupported type')
     return arg_type
-
-
-
