@@ -22,14 +22,14 @@ def conductor(direction: int,
     uv = 'xyz'.replace(r, '')
 
     if polarity < 0:
-        bc_E = """
+        bc_e = """
 if ({r} == 0) {{
     E{r}[i] = 0;
     E{u}[i] = E{u}[i+di{r}];
     E{v}[i] = E{v}[i+di{r}];
 }}
 """
-        bc_H = """
+        bc_h = """
 if ({r} == 0) {{
     H{r}[i] = H{r}[i+di{r}];
     H{u}[i] = 0;
@@ -38,7 +38,7 @@ if ({r} == 0) {{
 """
 
     elif polarity > 0:
-        bc_E = """
+        bc_e = """
 if ({r} == s{r} - 1) {{
     E{r}[i] = -E{r}[i-2*di{r}];
     E{u}[i] = +E{u}[i-di{r}];
@@ -47,7 +47,7 @@ if ({r} == s{r} - 1) {{
     E{r}[i] = 0;
 }}
 """
-        bc_H = """
+        bc_h = """
 if ({r} == s{r} - 1) {{
     H{r}[i] = +H{r}[i-di{r}];
     H{u}[i] = -H{u}[i-2*di{r}];
@@ -61,7 +61,7 @@ if ({r} == s{r} - 1) {{
         raise Exception()
 
     replacements = {'r': r, 'u': uv[0], 'v': uv[1]}
-    return [s.format(**replacements) for s in (bc_E, bc_H)]
+    return [s.format(**replacements) for s in (bc_e, bc_h)]
 
 
 def cpml(direction: int,
@@ -105,12 +105,12 @@ def cpml(direction: int,
     np = 'nVp'[numpy.sign(polarity)+1]
     uv = ['xyz'[i] for i in transverse]
 
-    xE = numpy.arange(1, thickness+1, dtype=float)[::-1]
-    xH = numpy.arange(1, thickness+1, dtype=float)[::-1]
+    xe = numpy.arange(1, thickness+1, dtype=float)[::-1]
+    xh = numpy.arange(1, thickness+1, dtype=float)[::-1]
     if polarity > 0:
-        xE -= 0.5
+        xe -= 0.5
     elif polarity < 0:
-        xH -= 0.5
+        xh -= 0.5
 
     def par(x):
         sigma = ((x / thickness) ** m[0]) * sigma_max
@@ -118,8 +118,8 @@ def cpml(direction: int,
         p0 = numpy.exp(-(sigma + alpha) * dt)
         p1 = sigma / (sigma + alpha) * (p0 - 1)
         return p0, p1
-    p0e, p1e = par(xE)
-    p0h, p1h = par(xH)
+    p0e, p1e = par(xe)
+    p0h, p1h = par(xh)
 
     vals = {'r': r,
             'u': uv[0],
@@ -148,7 +148,7 @@ if ( (s{r} - 1) > {r} && {r} > (s{r} - 1) - ({th} + 1) ) {{
     else:
         raise Exception('Bad polarity (=0)')
 
-    code_E = """
+    code_e = """
     // pml parameters:
     const float p0[{th}] = {{ {p0e} }};
     const float p1[{th}] = {{ {p1e} }};
@@ -160,7 +160,7 @@ if ( (s{r} - 1) > {r} && {r} > (s{r} - 1) - ({th} + 1) ) {{
     E{v}[i] {sh}= dt / eps{v}[i] * Psi_{r}{np}_E{v}[ip];
 }}
 """
-    code_H = """
+    code_h = """
     // pml parameters:
     const float p0[{th}] = {{ {p0h} }};
     const float p1[{th}] = {{ {p1h} }};
@@ -174,8 +174,8 @@ if ( (s{r} - 1) > {r} && {r} > (s{r} - 1) - ({th} + 1) ) {{
 """
 
     pml_data = {
-        'E': (bounds_if + code_E).format(**vals),
-        'H': (bounds_if + code_H).format(**vals),
+        'E': (bounds_if + code_e).format(**vals),
+        'H': (bounds_if + code_h).format(**vals),
         'psi_E': ['Psi_{r}{np}_E{u}'.format(**vals),
                   'Psi_{r}{np}_E{v}'.format(**vals)],
         'psi_H': ['Psi_{r}{np}_H{u}'.format(**vals),
