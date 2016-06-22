@@ -107,6 +107,7 @@ def main():
                    thickness=th,
                    eps=n_slab**2)
     mask = perturbed_l3(a, r)
+
     grid.draw_polygons(surface_normal=gridlock.Direction.z,
                        center=[0, 0, 0],
                        thickness=2 * th,
@@ -132,8 +133,10 @@ def main():
     fwhm = dwl * w * w / (2 * numpy.pi * dx)
     alpha = (fwhm ** 2) / 8 * numpy.log(2)
     delay = 7/numpy.sqrt(2 * alpha)
-    field_source = lambda t: numpy.sin(w * (t * sim.dt - delay)) * \
-                             numpy.exp(-alpha * (t * sim.dt - delay)**2)
+
+    def field_source(i):
+        t0 = i * sim.dt - delay
+        return numpy.sin(w * t0) * numpy.exp(-alpha * t0**2)
 
     # #### Run a bunch of iterations ####
     # event = sim.whatever([prev_event]) indicates that sim.whatever should be queued immediately and run
