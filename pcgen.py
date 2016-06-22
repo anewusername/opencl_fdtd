@@ -30,13 +30,20 @@ def triangular_lattice(dims: List[int],
         k = 1
 
     positions = []
-    for j in numpy.arange(dims[1]):
-        j_odd = j % 2
-        x_offset = (j_odd * 0.5) - dims[0]/2
-        y_offset = dims[1]/2
-        xs = numpy.arange(dims[0] - k * j_odd) + x_offset
-        ys = numpy.full_like(xs, j * numpy.sqrt(3)/2 + y_offset)
+    ymax = (dims[1] - 1)/2
+    for j in numpy.linspace(-ymax, ymax, dims[0]):
+        j_odd = numpy.floor(j) % 2
+
+        x_offset = j_odd * 0.5
+        y_offset = j * numpy.sqrt(3)/2
+
+        num_x = dims[0] - k * j_odd
+        xmax = (dims[0] - 1)/2
+        xs = numpy.linspace(-xmax, xmax - k * j_odd, num_x) + x_offset
+        ys = numpy.full_like(xs, y_offset)
+
         positions += [numpy.vstack((xs, ys)).T]
+
     xy = numpy.vstack(tuple(positions))
     return xy[xy[:, 0].argsort(), ]
 
