@@ -105,10 +105,11 @@ class Simulation(object):
                 Exception('Initial_H list elements must have same shape as epsilon elements')
             self.H = [pyopencl.array.to_device(self.queue, H.astype(float_type)) for H in initial_H]
 
-        E_args = [type_to_C(self.arg_type) + ' *E' + c for c in 'xyz']
-        H_args = [type_to_C(self.arg_type) + ' *H' + c for c in 'xyz']
-        eps_args = [type_to_C(self.arg_type) + ' *eps' + c for c in 'xyz']
-        dt_arg = [type_to_C(self.arg_type) + ' dt']
+        ctype = type_to_C(self.arg_type)
+        E_args = [ctype + ' *E' + c for c in 'xyz']
+        H_args = [ctype + ' *H' + c for c in 'xyz']
+        eps_args = [ctype + ' *eps' + c for c in 'xyz']
+        dt_arg = [ctype + ' dt']
 
         sxyz = base.shape_source(epsilon[0].shape)
         E_source = sxyz + base.dixyz_source + base.maxwell_E_source
@@ -163,12 +164,13 @@ class Simulation(object):
             psi_E_names += pml_data['psi_E']
             psi_H_names += pml_data['psi_H']
 
-        E_args = [type_to_C(self.arg_type) + ' *E' + c for c in 'xyz']
-        H_args = [type_to_C(self.arg_type) + ' *H' + c for c in 'xyz']
-        eps_args = [type_to_C(self.arg_type) + ' *eps' + c for c in 'xyz']
-        dt_arg = [type_to_C(self.arg_type) + ' dt']
-        arglist_E = [type_to_C(self.arg_type) + ' *' + psi for psi in psi_E_names]
-        arglist_H = [type_to_C(self.arg_type) + ' *' + psi for psi in psi_H_names]
+        ctype = type_to_C(self.arg_type)
+        E_args = [ctype + ' *E' + c for c in 'xyz']
+        H_args = [ctype + ' *H' + c for c in 'xyz']
+        eps_args = [ctype + ' *eps' + c for c in 'xyz']
+        dt_arg = [ctype + ' dt']
+        arglist_E = [ctype + ' *' + psi for psi in psi_E_names]
+        arglist_H = [ctype + ' *' + psi for psi in psi_H_names]
         pml_E_args = ', '.join(E_args + H_args + dt_arg + eps_args + arglist_E)
         pml_H_args = ', '.join(E_args + H_args + dt_arg + arglist_H)
 
