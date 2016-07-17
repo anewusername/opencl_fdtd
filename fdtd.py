@@ -96,7 +96,8 @@ def main():
     z_max = 1.6 * a
     xyz_max = numpy.hstack((xy_max, z_max)) + pml_thickness * dx
 
-    # Coordinates of the edges of the cells. The fdtd package can only do square grids at the moment.
+    # Coordinates of the edges of the cells.
+    #  The fdtd package can only do square grids at the moment.
     half_edge_coords = [numpy.arange(dx/2, m + dx, step=dx) for m in xyz_max]
     edge_coords = [numpy.hstack((-h[::-1], h)) for h in half_edge_coords]
 
@@ -139,8 +140,8 @@ def main():
         return numpy.sin(w * t0) * numpy.exp(-alpha * t0**2)
 
     # #### Run a bunch of iterations ####
-    # event = sim.whatever([prev_event]) indicates that sim.whatever should be queued immediately and run
-    #  once prev_event is finished.
+    # event = sim.whatever([prev_event]) indicates that sim.whatever should be queued
+    #  immediately and run once prev_event is finished.
     output_file = h5py.File('simulation_output.h5', 'w')
     start = time.perf_counter()
     for t in range(max_t):
