@@ -30,7 +30,8 @@ const int diy = sz;
 const int diz = 1;
 """
 
-# Given a linear index i and shape sx, sy, sz, defines x, y, and z as the 3D indices of the current element (i).
+# Given a linear index i and shape sx, sy, sz, defines x, y, and z
+#  as the 3D indices of the current element (i).
 xyz_source = """
 // Convert linear index to field index (xyz)
 const int x = i / (sz * sy);

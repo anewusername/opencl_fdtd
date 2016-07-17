@@ -75,7 +75,7 @@ def perturbed_l3(a: float, radius: float, **kwargs) -> Pattern:
 def main():
     max_t = 8000            # number of timesteps
 
-    dx = 40                 # discretization (nm/cell)
+    dx = 15                 # discretization (nm/cell)
     pml_thickness = 8       # (number of cells)
 
     wl = 1550               # Excitation wavelength and fwhm
@@ -109,13 +109,16 @@ def main():
                    eps=n_slab**2)
     mask = perturbed_l3(a, r)
 
-    grid.draw_polygons(surface_normal=gridlock.Direction.z,
+    for i in range(5000):
+        print(i)
+        grid.draw_polygons(surface_normal=gridlock.Direction.z,
                        center=[0, 0, 0],
                        thickness=2 * th,
                        eps=n_air**2,
                        polygons=mask.as_polygons())
+    return
 
-    print(grid.shape)
+    print(grid.shape, numpy.prod(grid.shape))
     # #### Create the simulation grid ####
     sim = Simulation(grid.grids)
 
