@@ -174,8 +174,8 @@ class Simulation(object):
         pml_E_args = ', '.join(E_args + H_args + dt_arg + eps_args + arglist_E)
         pml_H_args = ', '.join(E_args + H_args + dt_arg + arglist_H)
 
-        pml_E = ElementwiseKernel(self.context, preamble=pml_data['tables'], arguments=pml_E_args, operation=pml_E_source)
-        pml_H = ElementwiseKernel(self.context, preamble=pml_data['tables'], arguments=pml_H_args, operation=pml_H_source)
+        pml_E = ElementwiseKernel(self.context, arguments=pml_E_args, operation=pml_E_source)
+        pml_H = ElementwiseKernel(self.context, arguments=pml_H_args, operation=pml_H_source)
 
         self.cpml_E = lambda e: pml_E(*self.E, *self.H, self.dt, *self.eps, *psi_E, wait_for=e)
         self.cpml_H = lambda e: pml_H(*self.E, *self.H, self.dt, *psi_H, wait_for=e)
