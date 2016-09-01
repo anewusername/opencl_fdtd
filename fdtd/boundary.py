@@ -118,18 +118,12 @@ def cpml(direction: int,
         p0 = numpy.exp(-(sigma + alpha) * dt)
         p1 = sigma / (sigma + alpha) * (p0 - 1)
         return p0, p1
-    p0e, p1e = par(xe)
-    p0h, p1h = par(xh)
 
     vals = {'r': r,
             'u': uv[0],
             'v': uv[1],
             'np':   np,
             'th':   thickness,
-            'p0e': ', '.join((str(x) for x in p0e)),
-            'p1e': ', '.join((str(x) for x in p1e)),
-            'p0h': ', '.join((str(x) for x in p0h)),
-            'p1h': ', '.join((str(x) for x in p1h)),
             'se': '-+'[direction % 2],
             'sh': '+-'[direction % 2]}
 
@@ -149,24 +143,16 @@ if ( (s{r} - 1) > {r} && {r} > (s{r} - 1) - ({th} + 1) ) {{
         raise Exception('Bad polarity (=0)')
 
     code_e = """
-    // pml parameters:
-    const float p0[{th}] = {{ {p0e} }};
-    const float p1[{th}] = {{ {p1e} }};
-
-    Psi_{r}{np}_E{u}[ip] = p0[ir] * Psi_{r}{np}_E{u}[ip] + p1[ir] * (H{v}[i] - H{v}[i-di{r}]);
-    Psi_{r}{np}_E{v}[ip] = p0[ir] * Psi_{r}{np}_E{v}[ip] + p1[ir] * (H{u}[i] - H{u}[i-di{r}]);
+    Psi_{r}{np}_E{u}[ip] = p0e[ir] * Psi_{r}{np}_E{u}[ip] + p1e[ir] * (H{v}[i] - H{v}[i-di{r}]);
+    Psi_{r}{np}_E{v}[ip] = p0e[ir] * Psi_{r}{np}_E{v}[ip] + p1e[ir] * (H{u}[i] - H{u}[i-di{r}]);
 
     E{u}[i] {se}= dt / eps{u}[i] * Psi_{r}{np}_E{u}[ip];
     E{v}[i] {sh}= dt / eps{v}[i] * Psi_{r}{np}_E{v}[ip];
 }}
 """
     code_h = """
-    // pml parameters:
-    const float p0[{th}] = {{ {p0h} }};
-    const float p1[{th}] = {{ {p1h} }};
-
-    Psi_{r}{np}_H{u}[ip] = p0[ir] * Psi_{r}{np}_H{u}[ip] + p1[ir] * (E{v}[i+di{r}] - E{v}[i]);
-    Psi_{r}{np}_H{v}[ip] = p0[ir] * Psi_{r}{np}_H{v}[ip] + p1[ir] * (E{u}[i+di{r}] - E{u}[i]);
+    Psi_{r}{np}_H{u}[ip] = p0h[ir] * Psi_{r}{np}_H{u}[ip] + p1h[ir] * (E{v}[i+di{r}] - E{v}[i]);
+    Psi_{r}{np}_H{v}[ip] = p0h[ir] * Psi_{r}{np}_H{v}[ip] + p1h[ir] * (E{u}[i+di{r}] - E{u}[i]);
 
     H{u}[i] {sh}= dt * Psi_{r}{np}_H{u}[ip];
     H{v}[i] {se}= dt * Psi_{r}{np}_H{v}[ip];
@@ -180,6 +166,8 @@ if ( (s{r} - 1) > {r} && {r} > (s{r} - 1) - ({th} + 1) ) {{
                   'Psi_{r}{np}_E{v}'.format(**vals)],
         'psi_H': ['Psi_{r}{np}_H{u}'.format(**vals),
                   'Psi_{r}{np}_H{v}'.format(**vals)],
+        'pe': par(xe),
+        'ph': par(xh),
     }
 
     return pml_data

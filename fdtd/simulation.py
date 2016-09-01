@@ -171,14 +171,19 @@ class Simulation(object):
         dt_arg = [ctype + ' dt']
         arglist_E = [ctype + ' *' + psi for psi in psi_E_names]
         arglist_H = [ctype + ' *' + psi for psi in psi_H_names]
-        pml_E_args = ', '.join(E_args + H_args + dt_arg + eps_args + arglist_E)
-        pml_H_args = ', '.join(E_args + H_args + dt_arg + arglist_H)
+        pe_args = [ctype + ' *' + s for s in ('p0e', 'p1e')]
+        ph_args = [ctype + ' *' + s for s in ('p0h', 'p1h')]
+        pml_E_args = ', '.join(E_args + H_args + dt_arg + eps_args + arglist_E + pe_args)
+        pml_H_args = ', '.join(E_args + H_args + dt_arg + arglist_H + ph_args)
 
         pml_E = ElementwiseKernel(self.context, arguments=pml_E_args, operation=pml_E_source)
         pml_H = ElementwiseKernel(self.context, arguments=pml_H_args, operation=pml_H_source)
 
-        self.cpml_E = lambda e: pml_E(*self.E, *self.H, self.dt, *self.eps, *psi_E, wait_for=e)
-        self.cpml_H = lambda e: pml_H(*self.E, *self.H, self.dt, *psi_H, wait_for=e)
+        pe = [pyopencl.array.to_device(self.queue, p) for p in pml_data['pe']]
+        ph = [pyopencl.array.to_device(self.queue, p) for p in pml_data['ph']]
+
+        self.cpml_E = lambda e: pml_E(*self.E, *self.H, self.dt, *self.eps, *psi_E, *pe, wait_for=e)
+        self.cpml_H = lambda e: pml_H(*self.E, *self.H, self.dt, *psi_H, *ph, wait_for=e)
         self.cmpl_psi_E = {k: v for k, v in zip(psi_E_names, psi_E)}
         self.cmpl_psi_H = {k: v for k, v in zip(psi_H_names, psi_H)}
 

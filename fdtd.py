@@ -156,8 +156,12 @@ def main():
         print('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
         sys.stdout.flush()
 
+        if t % 20 == 0:
+            r = sum([(f * f * e).get().sum() for f, e in zip(sim.E, sim.eps)])
+            print('E sum', r)
+
         # Save field slices
-        if (t % 20 == 0 and (max_t - t < 1000 or t < 1000)) or t == max_t-1:
+        if (t % 20 == 0 and (max_t - t <= 1000 or t <= 2000)) or t == max_t-1:
             print('saving E-field')
             for j, f in enumerate(sim.E):
                 a = f.get()
