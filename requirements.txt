@@ -1,6 +1,8 @@
 numpy
 h5py
 pyopencl
+jinja2
 -e git+https://mpxd.net/gogs/jan/float_raster.git@release#egg=float_raster
 -e git+https://mpxd.net/gogs/jan/gridlock.git@release#egg=gridlock
 -e git+https://mpxd.net/gogs/jan/masque.git@release#egg=masque
+-e git+https://mpxd.net/gogs/jan/fdfd_tools.git@master#egg=fdfd_tools

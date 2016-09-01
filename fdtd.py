@@ -8,12 +8,17 @@ import sys
 import time
 
 import numpy
-import h5py
+import lzma 
+import dill
 
 from fdtd.simulation import Simulation
 from masque import Pattern, shapes
 import gridlock
 import pcgen
+import fdfd_tools
+
+
+__author__ = 'Jan Petykiewicz'
 
 
 def perturbed_l3(a: float, radius: float, **kwargs) -> Pattern:
@@ -75,7 +80,7 @@ def perturbed_l3(a: float, radius: float, **kwargs) -> Pattern:
 def main():
     max_t = 8000            # number of timesteps
 
-    dx = 40                 # discretization (nm/cell)
+    dx = 25                 # discretization (nm/cell)
     pml_thickness = 8       # (number of cells)
 
     wl = 1550               # Excitation wavelength and fwhm
@@ -114,19 +119,9 @@ def main():
                        eps=n_air**2,
                        polygons=mask.as_polygons())
 
-    print(grid.shape)
+    print('grid shape: {}'.format(grid.shape))
     # #### Create the simulation grid ####
-    sim = Simulation(grid.grids)
-
-    # Conducting boundaries and pmls in every direction
-    c_args = []
-    pml_args = []
-    for d in (0, 1, 2):
-        for p in (-1, 1):
-            c_args += [{'direction': d, 'polarity': p}]
-            pml_args += [{'direction': d, 'polarity': p, 'epsilon_eff': n_slab**2}]
-    sim.init_conductors(c_args)
-    sim.init_cpml(pml_args)
+    sim = Simulation(grid.grids, do_poynting=True, pml_thickness=8)
 
     # Source parameters and function
     w = 2 * numpy.pi * dx / wl
@@ -137,31 +132,44 @@ def main():
     def field_source(i):
         t0 = i * sim.dt - delay
         return numpy.sin(w * t0) * numpy.exp(-alpha * t0**2)
+   
+    with open('sources.c', 'w') as f:
+        f.write(sim.sources['E'])
+        f.write('\n==========================================\n')
+        f.write(sim.sources['H'])
+        if sim.update_S:
+            f.write('\n==========================================\n')
+            f.write(sim.sources['S'])
 
     # #### Run a bunch of iterations ####
     # event = sim.whatever([prev_event]) indicates that sim.whatever should be queued immediately and run
     #  once prev_event is finished.
-    output_file = h5py.File('simulation_output.h5', 'w')
     start = time.perf_counter()
     for t in range(max_t):
-        event = sim.cpml_E([])
-        sim.update_E([event]).wait()
+        sim.update_E([]).wait()
 
-        sim.E[1][tuple(grid.shape//2)] += field_source(t)
-        event = sim.conductor_E([])
-        event = sim.cpml_H([event])
-        event = sim.update_H([event])
-        sim.conductor_H([event]).wait()
+        ind = numpy.ravel_multi_index(tuple(grid.shape//2), dims=grid.shape, order='C') + numpy.prod(grid.shape)
+        sim.E[ind] += field_source(t)
+        e = sim.update_H([])
+        if sim.update_S:
+            e = sim.update_S([e])
+        e.wait()
 
-        print('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
-        sys.stdout.flush()
+        if t % 100 == 0:
+            print('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
+            sys.stdout.flush()
 
-        # Save field slices
-        if (t % 20 == 0 and (max_t - t < 1000 or t < 1000)) or t == max_t-1:
-            print('saving E-field')
-            for j, f in enumerate(sim.E):
-                a = f.get()
-                output_file['/E{}_t{}'.format('xyz'[j], t)] = a[:, :, round(a.shape[2]/2)]
+    with lzma.open('saved_simulation', 'wb') as f:
+        def unvec(f):
+            return fdfd_tools.unvec(f, grid.shape)
+        d = {
+            'grid': grid,
+            'E': unvec(sim.E.get()),
+            'H': unvec(sim.H.get()),
+            }
+        if sim.S is not None:
+            d['S'] = unvec(sim.S.get())
+        dill.dump(d, f)
 
 if __name__ == '__main__':
     main()
