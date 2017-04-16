@@ -17,6 +17,7 @@ from fdfd_tools import vec
 
 __author__ = 'Jan Petykiewicz'
 
+float4 = pyopencl.array.vec.float4
 
 # Create jinja2 env on module load
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
@@ -88,12 +89,23 @@ class Simulation(object):
         else:
             self.dt = dt
 
+        def make4d(f):
+            g = [numpy.transpose(fi)[:,:,:,None] for fi in f]
+            h = g + [numpy.empty_like(g[0])]
+            j = numpy.concatenate(h, axis=3)
+            return numpy.ascontiguousarray(j, dtype=numpy.float32) 
+
         self.arg_type = float_type
         self.sources = {}
-        self.eps = pyopencl.array.to_device(self.queue, vec(epsilon).astype(float_type))
+        ef = make4d(epsilon).astype(float_type)
+        self.eps = pyopencl.image_from_array(self.context,
+                make4d(epsilon), num_channels=4, mode='r')
+
+        self.buf = pyopencl.array.Array(self.queue, shape=epsilon.shape, dtype=float4)
 
         if initial_E is None:
-            self.E = pyopencl.array.zeros_like(self.eps)
+            self.E = pyopencl.image_from_array(self.context,
+                make4d(epsilon) * 0, num_channels=4, mode='r')
         else:
             if len(initial_E) != 3:
                 Exception('Initial_E must be a list of length 3')
@@ -102,7 +114,8 @@ class Simulation(object):
             self.E = pyopencl.array.to_device(self.queue, vec(E).astype(float_type))
 
         if initial_H is None:
-            self.H = pyopencl.array.zeros_like(self.eps)
+            self.H = pyopencl.image_from_array(self.context,
+                make4d(epsilon) * 0, num_channels=4, mode='r')
         else:
             if len(initial_H) != 3:
                 Exception('Initial_H must be a list of length 3')
@@ -119,15 +132,8 @@ class Simulation(object):
             return ctype + ' *' + arg
 
         base_fields = OrderedDict()
-        base_fields[ptr('E')] = self.E
-        base_fields[ptr('H')] = self.H
-        base_fields[ctype + ' dt'] = self.dt
-
-        eps_field = OrderedDict()
-        eps_field[ptr('eps')] = self.eps
 
         common_source = jinja_env.get_template('common.cl').render(
-                ftype=ctype,
                 shape=epsilon[0].shape,
                 )
         jinja_args = {
@@ -136,8 +142,8 @@ class Simulation(object):
                 'pmls': pmls,
                 'do_poynting': do_poynting,
                 }
-        E_source = jinja_env.get_template('update_e.cl').render(**jinja_args)
-        H_source = jinja_env.get_template('update_h.cl').render(**jinja_args)
+        E_source = jinja_env.get_template('update_e_full.cl').render(**jinja_args)
+        H_source = jinja_env.get_template('update_h_full.cl').render(**jinja_args)
 
         self.sources['E'] = E_source
         self.sources['H'] = H_source
@@ -198,17 +204,26 @@ class Simulation(object):
         '''
         Create operations
         '''
-        E_args = OrderedDict()
-        [E_args.update(d) for d in (base_fields, eps_field, pml_e_fields)]
-        E_update = ElementwiseKernel(self.context, operation=E_source,
-                                     arguments=', '.join(E_args.keys()))
+        E_update = pyopencl.Program(self.context, E_source).build().update_e
+        H_update = pyopencl.Program(self.context, H_source).build().update_h
+        max_gs = E_update.get_work_group_info(pyopencl.kernel_work_group_info.WORK_GROUP_SIZE,
+                                      self.queue.device)
+        gs, ls = self.buf.get_sizes(self.queue, max_gs)
+        print('gs', gs, ls, max_gs)
+        def update_E(e):
+            e = pyopencl.enqueue_copy(self.queue, self.buf.data, self.E, offset=0, origin=(0,0,0), region=epsilon[0].shape, wait_for=e)
+            e = E_update(self.queue, gs, ls, self.buf.data, self.H, numpy.float32(dt), self.eps, numpy.uint32(self.buf.size), wait_for=[e])
+            return e
 
-        H_args = OrderedDict()
-        [H_args.update(d) for d in (base_fields, pml_h_fields, S_fields)]
-        H_update = ElementwiseKernel(self.context, operation=H_source,
-                                     arguments=', '.join(H_args.keys()))
-        self.update_E = lambda e: E_update(*E_args.values(), wait_for=e)
-        self.update_H = lambda e: H_update(*H_args.values(), wait_for=e)
+        def update_H(e):
+            e = pyopencl.enqueue_copy(self.queue, self.E, self.buf.data, offset=0, origin=(0,0,0), region=epsilon[0].shape, wait_for=e)
+            e = pyopencl.enqueue_copy(self.queue, self.buf.data, self.H, offset=0, origin=(0,0,0), region=epsilon[0].shape, wait_for=[e])
+            e = H_update(self.queue, gs, ls, self.E, self.buf.data, numpy.float32(dt), numpy.uint32(self.buf.size), wait_for=[e])
+            e = pyopencl.enqueue_copy(self.queue, self.H, self.buf.data, offset=0, origin=(0,0,0), region=epsilon[0].shape, wait_for=[e])
+            return e
+
+        self.update_E = update_E
+        self.update_H = update_H
 
         if do_poynting:
             S_args = OrderedDict()

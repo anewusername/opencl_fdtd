@@ -122,7 +122,7 @@ def main():
 
     print('grid shape: {}'.format(grid.shape))
     # #### Create the simulation grid ####
-    sim = Simulation(grid.grids, do_poynting=True, pml_thickness=8)
+    sim = Simulation(grid.grids, do_poynting=False, pmls=[])
 
     # Source parameters and function
     w = 2 * numpy.pi * dx / wl
@@ -150,7 +150,7 @@ def main():
         sim.update_E([]).wait()
 
         ind = numpy.ravel_multi_index(tuple(grid.shape//2), dims=grid.shape, order='C') + numpy.prod(grid.shape)
-        sim.E[ind] += field_source(t)
+#        sim.buf[ind] += field_source(t)
         e = sim.update_H([])
         if sim.update_S:
             e = sim.update_S([e])
