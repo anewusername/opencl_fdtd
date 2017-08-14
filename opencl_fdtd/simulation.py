@@ -152,7 +152,7 @@ class Simulation(object):
             S_fields[ptr('oS')] = self.oS
             S_fields[ptr('S')] = self.S
         else:
-            S_fields = OrderedDict() 
+            S_fields = OrderedDict()
 
         '''
         PML
@@ -167,7 +167,7 @@ class Simulation(object):
             p0 = numpy.exp(-(sigma + alpha) * dt)
             p1 = sigma / (sigma + alpha) * (p0 - 1)
             return p0, p1
-        
+
         xen, xep, xhn, xhp = (numpy.arange(1, pml_thickness + 1, dtype=float_type)[::-1] for _ in range(4))
         xep -= 0.5
         xhn -= 0.5
@@ -190,7 +190,7 @@ class Simulation(object):
             for ne, nh in zip(*psi_names):
                 pml_e_fields[ptr(ne)] = pyopencl.array.zeros(self.queue, tuple(psi_shape), dtype=self.arg_type)
                 pml_h_fields[ptr(nh)] = pyopencl.array.zeros(self.queue, tuple(psi_shape), dtype=self.arg_type)
-        
+
         self.pml_e_fields = pml_e_fields
         self.pml_h_fields = pml_h_fields
 

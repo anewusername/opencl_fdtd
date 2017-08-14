@@ -8,10 +8,10 @@ import sys
 import time
 
 import numpy
-import lzma 
+import lzma
 import dill
 
-from fdtd.simulation import Simulation
+from opencl_fdtd import Simulation
 from masque import Pattern, shapes
 import gridlock
 import pcgen
@@ -133,7 +133,7 @@ def main():
     def field_source(i):
         t0 = i * sim.dt - delay
         return numpy.sin(w * t0) * numpy.exp(-alpha * t0**2)
-   
+
     with open('sources.c', 'w') as f:
         f.write(sim.sources['E'])
         f.write('\n==========================================\n')
@@ -171,6 +171,7 @@ def main():
         if sim.S is not None:
             d['S'] = unvec(sim.S.get())
         dill.dump(d, f)
+
 
 if __name__ == '__main__':
     main()
