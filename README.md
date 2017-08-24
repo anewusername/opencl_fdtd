@@ -27,10 +27,12 @@ electromagnetic simulations on parallel compute hardware (mainly GPUs).
 * numpy
 * pyopencl
 * jinja2
+* [fdfd_tools](https://mpxd.net/gogs/jan/fdfd_tools)
+
+Optional (used for examples):
 * dill (for file output)
 * [gridlock](https://mpxd.net/gogs/jan/gridlock)
 * [masque](https://mpxd.net/gogs/jan/masque)
-* [fdfd_tools](https://mpxd.net/gogs/jan/fdfd_tools)
 
 To get the code, just clone this repository:
 ```bash

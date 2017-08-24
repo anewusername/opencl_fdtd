@@ -1,11 +1,11 @@
 /*
  *  Update E-field, including any PMLs.
- *  
+ *
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
  *   pmls: [('x', 'n'), ('z', 'p'),...] list of pml axes and polarities
  *   pml_thickness: Number of cells (integer)
- *   
+ *
  *  OpenCL args:
  *   E, H, dt, S, oS
  */
@@ -17,12 +17,12 @@
 
 /*
  * Calculate S from oS (pre-calculated components)
- */ 
+ */
 __global ftype *Sx = S + XX;
 __global ftype *Sy = S + YY;
 __global ftype *Sz = S + ZZ;
 
-// Use unscaled S components from H locations 
+// Use unscaled S components from H locations
 __global ftype *oSxy = oS + 0 * field_size;
 __global ftype *oSyz = oS + 1 * field_size;
 __global ftype *oSzx = oS + 2 * field_size;

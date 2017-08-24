@@ -25,6 +25,35 @@ jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
 class Simulation(object):
     """
     Constructs and holds the basic FDTD operations and related fields
+
+    After constructing this object, call the (update_E, update_H, update_S) members
+     to perform FDTD updates on the stored (E, H, S) fields:
+
+        sim = Simulation(grid.grids, do_poynting=True, pml_thickness=8)
+        with open('sources.c', 'w') as f:
+            f.write('{}'.format(sim.sources))
+
+        for t in range(max_t):
+            sim.update_E([]).wait()
+
+            # Find the linear index for the center point, for Ey
+            ind = numpy.ravel_multi_index(tuple(grid.shape//2), dims=grid.shape, order='C') + \
+                    numpy.prod(grid.shape) * 1
+            # Perturb the field (i.e., add a soft current source)
+            sim.E[ind] += numpy.sin(omega * t * sim.dt)
+            event = sim.update_H([])
+            if sim.update_S:
+                event = sim.update_S([event])
+            event.wait()
+
+            with lzma.open('saved_simulation', 'wb') as f:
+                dill.dump(fdfd_tools.unvec(sim.E.get(), grid.shape), f)
+
+    Code in the form
+        event2 = sim.update_H([event0, event1])
+     indicates that the update_H operation should be prepared immediately, but wait for
+     event0 and event1 to occur (i.e. previous operations to finish) before starting execution.
+     event2 can then be used to prepare further operations to be run after update_H.
     """
     E = None    # type: List[pyopencl.array.Array]
     H = None    # type: List[pyopencl.array.Array]
@@ -37,9 +66,9 @@ class Simulation(object):
     context = None      # type: pyopencl.Context
     queue = None        # type: pyopencl.CommandQueue
 
-    update_E = None     # type: Callable[[],pyopencl.Event]
-    update_H = None     # type: Callable[[],pyopencl.Event]
-    update_S = None     # type: Callable[[],pyopencl.Event]
+    update_E = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    update_H = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    update_S = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
     sources = None      # type: Dict[str, str]
 
     def __init__(self,
@@ -50,8 +79,8 @@ class Simulation(object):
                  context: pyopencl.Context = None,
                  queue: pyopencl.CommandQueue = None,
                  float_type: numpy.float32 or numpy.float64 = numpy.float32,
-                 pml_thickness: int = 10,
                  pmls: List[List[str]] = None,
+                 pml_thickness: int = 10,
                  do_poynting: bool = True):
         """
         Initialize the simulation.
@@ -64,6 +93,21 @@ class Simulation(object):
         :param context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
         :param queue: pyOpenCL command queue. If not given, pyopencl.CommandQueue(context) is called.
         :param float_type: numpy.float32 or numpy.float64. Default numpy.float32.
+        :param pmls: List of [axis, direction] pairs which specify simluation boundaries to be
+                'coated' with a PML (absorbing layer). Axis should be one of 'x', 'y', 'z', and
+                direction should be one of 'n', 'p' (i.e., negative, positive).
+                Default is to apply PMLs to all six boundaries.
+        :param pml_thickness: Thickness of any PMLs, in number of grid cells. Default 10.
+        :param do_poynting: If true, enables calculation of the poynting vector, S.
+                Poynting vector calculation adds the following computational burdens:
+                    * During update_H, ~6 extra additions/cell are performed in order to spatially
+                        average E and temporally average H. These quantities are multiplied
+                        (6 multiplications/cell) and then stored (6 writes/cell, cache-friendly).
+                    * update_S performs a discrete cross product using the precalculated products
+                        from update_H. This is not nice to the cache and similar to e.g. update_E
+                        in complexity.
+                    * GPU memory requirements are approximately doubled, since S and the intermediate
+                        products must be stored.
         """
 
         if len(epsilon) != 3:

@@ -1,12 +1,12 @@
 /*
  *  Update H-field, including any PMLs.
  *   Also precalculate values for poynting vector if necessary.
- *  
+ *
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
  *   pmls: [('x', 'n'), ('z', 'p'),...] list of pml axes and polarities
  *   pml_thickness: Number of cells (integer)
- *   do_poynting: Whether to precalculate poynting vector components (boolean)  
+ *   do_poynting: Whether to precalculate poynting vector components (boolean)
  *
  *  OpenCL args:
  *   E, H, dt, [p{01}h{np}, Psi_{xyz}{np}_H], [oS]

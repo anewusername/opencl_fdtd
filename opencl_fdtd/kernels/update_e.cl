@@ -1,11 +1,11 @@
 /*
  *  Update E-field, including any PMLs.
- *  
+ *
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
  *   pmls: [('x', 'n'), ('z', 'p'),...] list of pml axes and polarities
  *   pml_thickness: Number of cells (integer)
- *   
+ *
  *  OpenCL args:
  *   E, H, dt, eps, [p{01}e{np}, Psi_{xyz}{np}_E]
  */
