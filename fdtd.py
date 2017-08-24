@@ -6,6 +6,7 @@ See main() for simulation setup.
 
 import sys
 import time
+import logging
 
 import numpy
 import lzma
@@ -19,6 +20,9 @@ import fdfd_tools
 
 
 __author__ = 'Jan Petykiewicz'
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 def perturbed_l3(a: float, radius: float, **kwargs) -> Pattern:
@@ -120,7 +124,7 @@ def main():
                        eps=n_air**2,
                        polygons=mask.as_polygons())
 
-    print('grid shape: {}'.format(grid.shape))
+    logger.info('grid shape: {}'.format(grid.shape))
     # #### Create the simulation grid ####
     sim = Simulation(grid.grids, do_poynting=True, pml_thickness=8)
 
@@ -157,7 +161,7 @@ def main():
         e.wait()
 
         if t % 100 == 0:
-            print('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
+            logger.info('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
             sys.stdout.flush()
 
     with lzma.open('saved_simulation', 'wb') as f:
