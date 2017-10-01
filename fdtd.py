@@ -126,7 +126,9 @@ def main():
 
     logger.info('grid shape: {}'.format(grid.shape))
     # #### Create the simulation grid ####
-    sim = Simulation(grid.grids, do_poynting=True, pml_thickness=8)
+    pmls = [{'axis': a, 'polarity': p, 'thickness': pml_thickness}
+            for a in 'xyz' for p in 'np']
+    sim = Simulation(grid.grids, do_poynting=True, pmls=pmls)
 
     # Source parameters and function
     w = 2 * numpy.pi * dx / wl

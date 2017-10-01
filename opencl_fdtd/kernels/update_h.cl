@@ -4,21 +4,17 @@
  *
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
- *   pmls: [('x', 'n'), ('z', 'p'),...] list of pml axes and polarities
- *   pml_thickness: Number of cells (integer)
+ *   pmls: [{'axis': 'x', 'polarity': 'n', 'thickness': 8}, ...] list of pml dicts containing
+        axes, polarities, and thicknesses.
  *   do_poynting: Whether to precalculate poynting vector components (boolean)
  *
  *  OpenCL args:
- *   E, H, dt, [p{01}h{np}, Psi_{xyz}{np}_H], [oS]
+ *   E, H, dt, [p{xyz}{01}h{np}, Psi_{xyz}{np}_H], [oS]
  */
 
 {{common_header}}
 
 ////////////////////////////////////////////////////////////////////////////
-
-{% if pmls -%}
-const int pml_thickness = {{pml_thickness}};
-{%- endif %}
 
 /*
  *  Precalculate derivatives
@@ -57,7 +53,9 @@ ftype pHxi = 0;
 ftype pHyi = 0;
 ftype pHzi = 0;
 
-{%- for r, p in pmls -%}
+{% for pml in pmls -%}
+    {%- set r = pml['axis'] -%}
+    {%- set p = pml['polarity'] -%}
     {%- set u, v = ['x', 'y', 'z'] | reject('equalto', r) -%}
     {%- set psi = 'Psi_' ~ r ~ p ~ '_H' -%}
     {%- if r != 'y' -%}
@@ -66,14 +64,16 @@ ftype pHzi = 0;
         {%- set se, sh = '+', '-' -%}
     {%- endif -%}
 
+pml_{{r ~ p}}_thickness = {{pml['thickness']}};
+
     {%- if p == 'n' %}
 
-if ( {{r}} < pml_thickness ) {
+if ( {{r}} < pml_{{r ~ p}}_thickness ) {
     const size_t ir = {{r}};                          // index into pml parameters
 
     {%- elif p == 'p' %}
 
-if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_thickness ) {
+if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_{{r ~ p}}_thickness ) {
     const size_t ir = (s{{r}} - 1) - {{r}};                     // index into pml parameters
 
     {%- endif %}

@@ -29,7 +29,8 @@ class Simulation(object):
     After constructing this object, call the (update_E, update_H, update_S) members
      to perform FDTD updates on the stored (E, H, S) fields:
 
-        sim = Simulation(grid.grids, do_poynting=True, pml_thickness=8)
+        pmls = [{'axis': a, 'polarity': p} for a in 'xyz' for p in 'np']
+        sim = Simulation(grid.grids, do_poynting=True, pmls=pmls)
         with open('sources.c', 'w') as f:
             f.write('{}'.format(sim.sources))
 
@@ -73,31 +74,34 @@ class Simulation(object):
 
     def __init__(self,
                  epsilon: List[numpy.ndarray],
+                 pmls: List[Dict[str, int or float]],
                  dt: float = .99/numpy.sqrt(3),
                  initial_E: List[numpy.ndarray] = None,
                  initial_H: List[numpy.ndarray] = None,
                  context: pyopencl.Context = None,
                  queue: pyopencl.CommandQueue = None,
                  float_type: numpy.float32 or numpy.float64 = numpy.float32,
-                 pmls: List[List[str]] = None,
-                 pml_thickness: int = 10,
                  do_poynting: bool = True):
         """
         Initialize the simulation.
 
         :param epsilon: List containing [eps_r,xx, eps_r,yy, eps_r,zz], where each element is a Yee-shifted ndarray
                 spanning the simulation domain. Relative epsilon is used.
-        :param dt: Time step. Default is the Courant factor.
+        :param pmls: List of dicts with keys:
+            'axis': One of 'x', 'y', 'z'.
+            'direction': One of 'n', 'p'.
+            'thickness': Number of layers, default 8.
+            'epsilon_eff': Effective epsilon to match to. Default 1.0.
+            'mu_eff': Effective mu to match to. Default 1.0.
+            'ln_R_per_layer': Desired (ln(R) / thickness) value. Default -1.6.
+            'm': Polynomial grading exponent. Default 3.5.
+            'ma': Exponent for alpha. Default 1.
+        :param dt: Time step. Default is .99/sqrt(3).
         :param initial_E: Initial E-field (default is 0 everywhere). Same format as epsilon.
         :param initial_H: Initial H-field (default is 0 everywhere). Same format as epsilon.
         :param context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
         :param queue: pyOpenCL command queue. If not given, pyopencl.CommandQueue(context) is called.
         :param float_type: numpy.float32 or numpy.float64. Default numpy.float32.
-        :param pmls: List of [axis, direction] pairs which specify simluation boundaries to be
-                'coated' with a PML (absorbing layer). Axis should be one of 'x', 'y', 'z', and
-                direction should be one of 'n', 'p' (i.e., negative, positive).
-                Default is to apply PMLs to all six boundaries.
-        :param pml_thickness: Thickness of any PMLs, in number of grid cells. Default 10.
         :param do_poynting: If true, enables calculation of the poynting vector, S.
                 Poynting vector calculation adds the following computational burdens:
                     * During update_H, ~6 extra additions/cell are performed in order to spatially
@@ -154,8 +158,13 @@ class Simulation(object):
                 Exception('Initial_H list elements must have same shape as epsilon elements')
             self.H = pyopencl.array.to_device(self.queue, vec(H).astype(float_type))
 
-        if pmls is None:
-            pmls = [[d, p] for d in 'xyz' for p in 'np']
+        for pml in pmls:
+            pml.setdefault('thickness', 8)
+            pml.setdefault('epsilon_eff', 1.0)
+            pml.setdefault('mu_eff', 1.0)
+            pml.setdefault('ln_R_per_layer', -1.6)
+            pml.setdefault('m', 3.5)
+            pml.setdefault('ma', 1)
 
         ctype = type_to_C(self.arg_type)
 
@@ -176,7 +185,6 @@ class Simulation(object):
                 )
         jinja_args = {
                 'common_header': common_source,
-                'pml_thickness': pml_thickness,
                 'pmls': pmls,
                 'do_poynting': do_poynting,
                 }
@@ -201,35 +209,39 @@ class Simulation(object):
         '''
         PML
         '''
-        m = (3.5, 1)
-        sigma_max = 0.8 * (m[0] + 1) / numpy.sqrt(1.0) # TODO: epsilon_eff (not 1.0)
-        alpha_max = 0  # TODO: Decide what to do about non-zero alpha
-
-        def par(x):
-            sigma = ((x / pml_thickness) ** m[0]) * sigma_max
-            alpha = ((1 - x / pml_thickness) ** m[1]) * alpha_max
-            p0 = numpy.exp(-(sigma + alpha) * dt)
-            p1 = sigma / (sigma + alpha) * (p0 - 1)
-            return p0, p1
-
-        xen, xep, xhn, xhp = (numpy.arange(1, pml_thickness + 1, dtype=float_type)[::-1] for _ in range(4))
-        xep -= 0.5
-        xhn -= 0.5
-
-        pml_p_names = [['p' + a + eh + np for np in 'np' for a in '01'] for eh in 'eh']
         pml_e_fields = OrderedDict()
         pml_h_fields = OrderedDict()
-        for ne, nh, pe, ph in zip(*pml_p_names, par(xen) + par(xep), par(xhn) + par(xhp)):
-            pml_e_fields[ptr(ne)] = pyopencl.array.to_device(self.queue, pe)
-            pml_h_fields[ptr(nh)] = pyopencl.array.to_device(self.queue, ph)
-
         for pml in pmls:
-            uv = 'xyz'.replace(pml[0], '')
-            psi_base = 'Psi_' + ''.join(pml) + '_'
+            a = 'xyz'.find(pml['axis'])
+
+            sigma_max = -pml['ln_R_per_layer'] / 2 * (pml['m'] + 1) / \
+                    numpy.sqrt(pml['epsilon_eff'] * pml['mu_eff'])
+            alpha_max = 0           # TODO: Nonzero alpha
+
+            def par(x):
+                sigma = ((x / pml['thickness']) ** pml['m']) * sigma_max
+                alpha = ((1 - x / pml['thickness']) ** pml['ma']) * alpha_max
+                p0 = numpy.exp(-(sigma + alpha) * dt)
+                p1 = sigma / (sigma + alpha) * (p0 - 1)
+                return p0, p1
+
+            xe, xh = (numpy.arange(1, pml['thickness'] + 1, dtype=float_type)[::-1] for _ in range(2))
+            if pml['polarity'] == 'p':
+                xe -= 0.5
+            elif pml['polarity'] == 'n':
+                xh -= 0.5
+
+            pml_p_names = [['p' + pml['axis'] + i + eh + pml['polarity'] for i in '01'] for eh in 'eh']
+            for name_e, name_h, pe, ph in zip(pml_p_names[0], pml_p_names[1], par(xe), par(xh)):
+                pml_e_fields[ptr(name_e)] = pyopencl.array.to_device(self.queue, pe)
+                pml_h_fields[ptr(name_h)] = pyopencl.array.to_device(self.queue, ph)
+
+            uv = 'xyz'.replace(pml['axis'], '')
+            psi_base = 'Psi_' + pml['axis'] + pml['polarity'] + '_'
             psi_names = [[psi_base + eh + c for c in uv] for eh in 'EH']
 
             psi_shape = list(epsilon[0].shape)
-            psi_shape['xyz'.find(pml[0])] = pml_thickness
+            psi_shape[a] = pml['thickness']
 
             for ne, nh in zip(*psi_names):
                 pml_e_fields[ptr(ne)] = pyopencl.array.zeros(self.queue, tuple(psi_shape), dtype=self.arg_type)
