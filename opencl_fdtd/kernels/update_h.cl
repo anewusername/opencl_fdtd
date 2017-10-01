@@ -78,8 +78,8 @@ if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_{{r ~ p}}_thickness ) {
 
     {%- endif %}
     const size_t ip = {{v}} + {{u}} * s{{v}} + ir * s{{v}} * s{{u}};  // linear index into Psi
-    {{psi ~ u}}[ip] = p0h{{p}}[ir] * {{psi ~ u}}[ip] + p1h{{p}}[ir] * dE{{v ~ r}};
-    {{psi ~ v}}[ip] = p0h{{p}}[ir] * {{psi ~ v}}[ip] + p1h{{p}}[ir] * dE{{u ~ r}};
+    {{psi ~ u}}[ip] = p{{r}}0h{{p}}[ir] * {{psi ~ u}}[ip] + p{{r}}1h{{p}}[ir] * dE{{v ~ r}};
+    {{psi ~ v}}[ip] = p{{r}}0h{{p}}[ir] * {{psi ~ v}}[ip] + p{{r}}1h{{p}}[ir] * dE{{u ~ r}};
     pH{{u}}i {{sh}}= {{psi ~ u}}[ip];
     pH{{v}}i {{se}}= {{psi ~ v}}[ip];
 }
