@@ -50,7 +50,7 @@ ftype pEzi = 0;
         {%- set se, sh = '+', '-' -%}
     {%- endif -%}
 
-pml_{{r ~ p}}_thickness = {{pml['thickness']}};
+int pml_{{r ~ p}}_thickness = {{pml['thickness']}};
 
     {%- if p == 'n' %}
 
