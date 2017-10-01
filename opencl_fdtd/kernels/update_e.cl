@@ -54,12 +54,12 @@ pml_{{r ~ p}}_thickness = {{pml['thickness']}};
 
     {%- if p == 'n' %}
 
-if ( {{r}} < pml_{{r ~ p}_thickness ) {
+if ( {{r}} < pml_{{r ~ p}}_thickness ) {
     const size_t ir = {{r}};                          // index into pml parameters
 
     {%- elif p == 'p' %}
 
-if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_{{r ~ p}_thickness ) {
+if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_{{r ~ p}}_thickness ) {
     const size_t ir = (s{{r}} - 1) - {{r}};                     // index into pml parameters
 
     {%- endif %}
