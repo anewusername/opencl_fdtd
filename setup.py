@@ -7,7 +7,7 @@ setup(name='opencl_fdtd',
       description='OpenCL FDTD solver',
       author='Jan Petykiewicz',
       author_email='anewusername@gmail.com',
-      url='https://mpxd.net/gogs/jan/opencl_fdtd',
+      url='https://mpxd.net/code/jan/opencl_fdtd',
       packages=find_packages(),
       package_data={
           'opencl_fdfd': ['kernels/*']

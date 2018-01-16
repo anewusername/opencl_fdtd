@@ -27,16 +27,16 @@ electromagnetic simulations on parallel compute hardware (mainly GPUs).
 * numpy
 * pyopencl
 * jinja2
-* [fdfd_tools](https://mpxd.net/gogs/jan/fdfd_tools)
+* [fdfd_tools](https://mpxd.net/code/jan/fdfd_tools)
 
 Optional (used for examples):
 * dill (for file output)
-* [gridlock](https://mpxd.net/gogs/jan/gridlock)
-* [masque](https://mpxd.net/gogs/jan/masque)
+* [gridlock](https://mpxd.net/code/jan/gridlock)
+* [masque](https://mpxd.net/code/jan/masque)
 
 To get the code, just clone this repository:
 ```bash
-git clone https://mpxd.net/gogs/jan/opencl_fdtd.git
+git clone https://mpxd.net/code/jan/opencl_fdtd.git
 ```
 
 You can install the requirements and their dependencies easily with
