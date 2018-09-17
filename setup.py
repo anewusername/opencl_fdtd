@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from setuptools import setup, find_packages
+import opencl_fdtd
 
 setup(name='opencl_fdtd',
-      version='0.4',
+      version=opencl_fdtd.version,
       description='OpenCL FDTD solver',
       author='Jan Petykiewicz',
       author_email='anewusername@gmail.com',
