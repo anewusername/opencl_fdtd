@@ -96,9 +96,9 @@ ftype Hz_old = Hz[i];
 {%- endif %}
 
 // H update equations
-Hx[i] -= dt * (dEzy - dEyz + pHxi);
-Hy[i] -= dt * (dExz - dEzx + pHyi);
-Hz[i] -= dt * (dEyx - dExy + pHzi);
+Hx[i] -= dt * (dEzy - dEyz - pHxi);
+Hy[i] -= dt * (dExz - dEzx - pHyi);
+Hz[i] -= dt * (dEyx - dExy - pHzi);
 
 {% if do_poynting -%}
 // Average H across timesteps
