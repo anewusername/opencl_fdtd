@@ -70,6 +70,7 @@ class Simulation(object):
     update_E = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
     update_H = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
     update_S = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    update_J = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
     sources = None      # type: Dict[str, str]
 
     def __init__(self,
@@ -80,7 +81,8 @@ class Simulation(object):
                  context: pyopencl.Context = None,
                  queue: pyopencl.CommandQueue = None,
                  float_type: numpy.float32 or numpy.float64 = numpy.float32,
-                 do_poynting: bool = True):
+                 do_poynting: bool = True,
+                 do_fieldsrc: bool = False):
         """
         Initialize the simulation.
 
@@ -179,6 +181,17 @@ class Simulation(object):
             S_fields[ptr('oS')] = self.oS
             S_fields[ptr('S')] = self.S
 
+        J_fields = OrderedDict()
+        if do_fieldsrc:
+            J_source = jinja_env.get_template('update_j.cl').render(**jinja_args)
+            self.sources['J'] = J_source
+
+            self.Ji = pyopencl.array.zeros_like(self.E)
+            self.Jr = pyopencl.array.zeros_like(self.E)
+            J_fields[ptr('Jr')] = self.Jr
+            J_fields[ptr('Ji')] = self.Ji
+
+
         '''
         PML
         '''
@@ -191,6 +204,15 @@ class Simulation(object):
         self.update_H = self._create_operation(H_source, (base_fields, pml_h_fields, S_fields))
         if do_poynting:
             self.update_S = self._create_operation(S_source, (base_fields, S_fields))
+        if do_fieldsrc:
+            args = OrderedDict()
+            [args.update(d) for d in (base_fields, J_fields)]
+            var_args = [ctype + ' ' + v for v in 'cs'] + ['uint ' + r + m for r in 'xyz' for m in ('min', 'max')]
+            print(var_args)
+            update = ElementwiseKernel(self.context, operation=J_source,
+                                       arguments=', '.join(list(args.keys()) + var_args))
+            #print(len(args.values()),'\n\n',  args.values(), args.keys())
+            self.update_J = lambda e, *a: update(*args.values(), *a, wait_for=e)
 
 
     def _create_pmls(self, pmls):
