@@ -203,16 +203,19 @@ class Simulation(object):
         for pml in pmls:
             a = 'xyz'.find(pml['axis'])
 
-            sigma_max = -pml['ln_R_per_layer'] / 2 * (pml['m'] + 1) / \
-                    numpy.sqrt(pml['epsilon_eff'] * pml['mu_eff'])
-            alpha_max = 0           # TODO: Nonzero alpha
+            sigma_max = -pml['ln_R_per_layer'] / 2 * (pml['m'] + 1)
+            kappa_max = numpy.sqrt(pml['mu_eff'] * pml['epsilon_eff'])
+            alpha_max = 0           # TODO: Nonzero alpha?
 
             def par(x):
-                sigma = ((x / pml['thickness']) ** pml['m']) * sigma_max
+                scaling = ((x / (pml['thickness'])) ** pml['m'])
+                sigma = scaling * sigma_max
+                kappa = 1 + scaling * (kappa_max - 1)
                 alpha = ((1 - x / pml['thickness']) ** pml['ma']) * alpha_max
-                p0 = numpy.exp(-(sigma + alpha) * dt)
-                p1 = sigma / (sigma + alpha) * (p0 - 1)
-                return p0, p1
+                p0 = numpy.exp(-(sigma / kappa + alpha) * self.dt)
+                p1 = sigma / (sigma + kappa * alpha) * (p0 - 1)
+                p2 = 1/kappa
+                return p0, p1, p2
 
             xe, xh = (numpy.arange(1, pml['thickness'] + 1, dtype=self.arg_type)[::-1] for _ in range(2))
             if pml['polarity'] == 'p':
@@ -220,7 +223,7 @@ class Simulation(object):
             elif pml['polarity'] == 'n':
                 xh -= 0.5
 
-            pml_p_names = [['p' + pml['axis'] + i + eh + pml['polarity'] for i in '01'] for eh in 'eh']
+            pml_p_names = [['p' + pml['axis'] + i + eh + pml['polarity'] for i in '012'] for eh in 'eh']
             for name_e, name_h, pe, ph in zip(pml_p_names[0], pml_p_names[1], par(xe), par(xh)):
                 pml_e_fields[ptr(name_e)] = pyopencl.array.to_device(self.queue, pe)
                 pml_h_fields[ptr(name_h)] = pyopencl.array.to_device(self.queue, ph)

@@ -45,6 +45,8 @@ ftype aEzy = Ez[i + py] + Ez[i];
 {%- endif %}
 
 
+
+
 /*
  *  PML Update
  */
@@ -78,6 +80,8 @@ if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_{{r ~ p}}_thickness ) {
 
     {%- endif %}
     const size_t ip = {{v}} + {{u}} * s{{v}} + ir * s{{v}} * s{{u}};  // linear index into Psi
+    dE{{v ~ r}} *= p{{r}}2h{{p}}[ir];
+    dE{{u ~ r}} *= p{{r}}2h{{p}}[ir];
     {{psi ~ u}}[ip] = p{{r}}0h{{p}}[ir] * {{psi ~ u}}[ip] + p{{r}}1h{{p}}[ir] * dE{{v ~ r}};
     {{psi ~ v}}[ip] = p{{r}}0h{{p}}[ir] * {{psi ~ v}}[ip] + p{{r}}1h{{p}}[ir] * dE{{u ~ r}};
     pH{{u}}i {{sh}}= {{psi ~ u}}[ip];
