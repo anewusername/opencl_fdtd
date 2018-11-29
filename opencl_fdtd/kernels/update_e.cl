@@ -31,6 +31,18 @@ ftype dHyz = Hy[i] - Hy[i + mz];
 ftype dHzx = Hz[i] - Hz[i + mx];
 ftype dHzy = Hz[i] - Hz[i + my];
 
+{% for bloch in bloch_boundaries -%}
+    {%- set r = bloch['axis'] -%}
+    {%- set u, v = ['x', 'y', 'z'] | reject('equalto', r) -%}
+if ({{r}} == 0) {
+    ftype bloch_im = {{bloch['real']}};
+    ftype bloch_re = {{bloch['imag']}};
+    dH{{u ~ r}} = bloch_re * dH{{v ~ r}} + bloch_im * (G{{u}}[i] - G{{u}}[i + m{{u}}]);
+    dH{{v ~ r}} = bloch_re * dH{{v ~ r}} + bloch_im * (G{{v}}[i] - G{{v}}[i + m{{v}}]);
+}
+{%- endfor %}
+
+
 /*
  *   PML Update
  */

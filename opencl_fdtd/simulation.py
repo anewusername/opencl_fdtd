@@ -76,6 +76,7 @@ class Simulation(object):
     def __init__(self,
                  epsilon: List[numpy.ndarray],
                  pmls: List[Dict[str, int or float]],
+                 bloch_boundaries: List[Dict[str, int or float]] = (),
                  dt: float = .99/numpy.sqrt(3),
                  initial_fields: Dict[str, List[numpy.ndarray]] = None,
                  context: pyopencl.Context = None,
@@ -132,6 +133,9 @@ class Simulation(object):
 
         self.E = self._create_field(initial_fields.get('E', None))
         self.H = self._create_field(initial_fields.get('H', None))
+        if bloch_boundaries:
+            self.F = self._create_field(initial_fields.get('F', None))
+            self.G = self._create_field(initial_fields.get('G', None))
 
         for pml in pmls:
             pml.setdefault('thickness', 8)
@@ -154,6 +158,17 @@ class Simulation(object):
         eps_field = OrderedDict()
         eps_field[ptr('eps')] = self.eps
 
+        if bloch_boundaries:
+            base_fields[ptr('F')] = self.F
+            base_fields[ptr('G')] = self.G
+
+            bloch_fields = OrderedDict()
+            bloch_fields[ptr('E')] = self.F
+            bloch_fields[ptr('H')] = self.G
+            bloch_fields[ctype + ' dt'] = self.dt
+            bloch_fields[ptr('F')] = self.E
+            bloch_fields[ptr('G')] = self.H
+
         common_source = jinja_env.get_template('common.cl').render(
                 ftype=ctype,
                 shape=self.shape,
@@ -162,13 +177,24 @@ class Simulation(object):
                 'common_header': common_source,
                 'pmls': pmls,
                 'do_poynting': do_poynting,
+                'bloch': bloch_boundaries,
                 }
         E_source = jinja_env.get_template('update_e.cl').render(**jinja_args)
         H_source = jinja_env.get_template('update_h.cl').render(**jinja_args)
-
         self.sources['E'] = E_source
         self.sources['H'] = H_source
 
+        if bloch_boundaries:
+            bloch_args = jinja_args.copy()
+            bloch_args['do_poynting'] = False
+            bloch_args['bloch'] = [{'axis': b['axis'],
+                                    'real': b['imag'],
+                                    'imag': b['real']}
+                                   for b in bloch_boundaries]
+            F_source = jinja_env.get_template('update_e.cl').render(**bloch_args)
+            G_source = jinja_env.get_template('update_h.cl').render(**bloch_args)
+            self.sources['F'] = F_source
+            self.sources['G'] = G_source
 
 
         S_fields = OrderedDict()
@@ -196,6 +222,8 @@ class Simulation(object):
         PML
         '''
         pml_e_fields, pml_h_fields = self._create_pmls(pmls)
+        if bloch_boundaries:
+            pml_f_fields, pml_g_fields = self._create_pmls(pmls)
 
         '''
         Create operations
@@ -204,6 +232,9 @@ class Simulation(object):
         self.update_H = self._create_operation(H_source, (base_fields, pml_h_fields, S_fields))
         if do_poynting:
             self.update_S = self._create_operation(S_source, (base_fields, S_fields))
+        if bloch_boundaries:
+            self.update_F = self._create_operation(F_source, (bloch_fields, eps_field, pml_f_fields))
+            self.update_G = self._create_operation(G_source, (bloch_fields, pml_g_fields))
         if do_fieldsrc:
             args = OrderedDict()
             [args.update(d) for d in (base_fields, J_fields)]

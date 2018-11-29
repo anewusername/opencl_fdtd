@@ -28,6 +28,21 @@ ftype dEyz = Ey[i + pz] - Ey[i];
 ftype dEzx = Ez[i + px] - Ez[i];
 ftype dEzy = Ez[i + py] - Ez[i];
 
+
+{% for bloch in bloch_boundaries -%}
+    {%- set r = bloch['axis'] -%}
+    {%- set u, v = ['x', 'y', 'z'] | reject('equalto', r) -%}
+if ({{r}} == s{{r}} - 1) {
+    ftype bloch_re = {{bloch['real']}};
+    ftype bloch_im = {{bloch['imag']}};
+    dE{{u ~ r}} = bloch_re * dE{{u ~ r}} + bloch_im * (F{{u}}[i + p{{u}}] - F{{u}}[i]);
+    dE{{v ~ r}} = bloch_re * dE{{v ~ r}} + bloch_im * (F{{v}}[i + p{{v}}] - F{{v}}[i]);
+}
+{%- endfor %}
+
+
+
+
 {%- if do_poynting %}
 
 
