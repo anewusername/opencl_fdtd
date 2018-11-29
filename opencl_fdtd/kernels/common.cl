@@ -73,9 +73,9 @@ __global ftype *Hz = H + ZZ;
  * the cell x_{+1} == 0 instead, ie. px = -(sx - 1) * dix .
  */
 {% for r in 'xyz' %}
-int m{{r}} = -di{{r}};
-int p{{r}} = +di{{r}};
-int wrap_{{r}} = (s{{r}} - 1) * di{{r}};
+int m{{r}} = - (int) di{{r}};
+int p{{r}} = + (int) di{{r}};
+int wrap_{{r}} = (s{{r}} - 1) * (int) di{{r}};
 if ( {{r}} == 0 ) {
   m{{r}} = wrap_{{r}};
 } else if ( {{r}} == s{{r}} - 1 ) {
