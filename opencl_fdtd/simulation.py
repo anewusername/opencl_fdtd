@@ -261,10 +261,8 @@ class Simulation(object):
             args = OrderedDict()
             [args.update(d) for d in (base_fields, J_fields)]
             var_args = [ctype + ' ' + v for v in 'cs'] + ['uint ' + r + m for r in 'xyz' for m in ('min', 'max')]
-            print(var_args)
             update = ElementwiseKernel(self.context, operation=J_source,
                                        arguments=', '.join(list(args.keys()) + var_args))
-            #print(len(args.values()),'\n\n',  args.values(), args.keys())
             self.update_J = lambda e, *a: update(*args.values(), *a, wait_for=e)
 
 
