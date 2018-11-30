@@ -128,7 +128,9 @@ def main():
     # #### Create the simulation grid ####
     pmls = [{'axis': a, 'polarity': p, 'thickness': pml_thickness}
             for a in 'xyz' for p in 'np']
-    sim = Simulation(grid.grids, do_poynting=True, pmls=pmls)
+    #bloch = [{'axis': a, 'real': 1, 'imag': 0} for a in 'x']
+    bloch = []
+    sim = Simulation(grid.grids, do_poynting=True, pmls=pmls, bloch_boundaries=bloch)
 
     # Source parameters and function
     w = 2 * numpy.pi * dx / wl
@@ -142,22 +144,32 @@ def main():
 
     with open('sources.c', 'w') as f:
         f.write(sim.sources['E'])
-        f.write('\n==========================================\n')
+        f.write('\n====================H======================\n')
         f.write(sim.sources['H'])
         if sim.update_S:
-            f.write('\n==========================================\n')
+            f.write('\n=====================S=====================\n')
             f.write(sim.sources['S'])
+        if bloch:
+            f.write('\n=====================F=====================\n')
+            f.write(sim.sources['F'])
+            f.write('\n=====================G=====================\n')
+            f.write(sim.sources['G'])
 
     # #### Run a bunch of iterations ####
     # event = sim.whatever([prev_event]) indicates that sim.whatever should be queued
     #  immediately and run once prev_event is finished.
     start = time.perf_counter()
     for t in range(max_t):
-        sim.update_E([]).wait()
+        e = sim.update_E([])
+        if bloch:
+            e = sim.update_F([e])
+        e.wait()
 
         ind = numpy.ravel_multi_index(tuple(grid.shape//2), dims=grid.shape, order='C') + numpy.prod(grid.shape)
         sim.E[ind] += field_source(t)
         e = sim.update_H([])
+        if bloch:
+            e = sim.update_G([e])
         if sim.update_S:
             e = sim.update_S([e])
         e.wait()
