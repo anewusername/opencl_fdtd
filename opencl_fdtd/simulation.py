@@ -100,9 +100,13 @@ class Simulation(object):
             'ln_R_per_layer': Desired (ln(R) / thickness) value. Default -1.6.
             'm': Polynomial grading exponent. Default 3.5.
             'ma': Exponent for alpha. Default 1.
+        :param bloch_boundaries: List of dicts with keys:
+            'axis': One of 'x', 'y', 'z'.
+            'real': Real part of bloch phase factor (i.e. real(exp(i * phase)))
+            'imag': Imaginary part of bloch phase factor (i.e. imag(exp(i * phase)))
         :param dt: Time step. Default is min(dxes) * .99/sqrt(3).
-        :param initial_E: Initial E-field (default is 0 everywhere). Same format as epsilon.
-        :param initial_H: Initial H-field (default is 0 everywhere). Same format as epsilon.
+        :param initial_fields: Dict with optional keys ('E', 'H', 'F', 'G') containing initial values for the
+            specified fields (default is 0 everywhere). Fields have same format as epsilon.
         :param context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
         :param queue: pyOpenCL command queue. If not given, pyopencl.CommandQueue(context) is called.
         :param float_type: numpy.float32 or numpy.float64. Default numpy.float32.
