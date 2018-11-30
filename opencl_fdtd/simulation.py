@@ -56,11 +56,11 @@ class Simulation(object):
      event0 and event1 to occur (i.e. previous operations to finish) before starting execution.
      event2 can then be used to prepare further operations to be run after update_H.
     """
-    E = None    # type: List[pyopencl.array.Array]
-    H = None    # type: List[pyopencl.array.Array]
-    S = None    # type: List[pyopencl.array.Array]
-    eps = None  # type: List[pyopencl.array.Array]
-    dt = None   # type: float
+    E = None            # type: pyopencl.array.Array
+    H = None            # type: pyopencl.array.Array
+    S = None            # type: pyopencl.array.Array
+    eps = None          # type: pyopencl.array.Array
+    dt = None           # type: float
 
     arg_type = None     # type: numpy.float32 or numpy.float64
 

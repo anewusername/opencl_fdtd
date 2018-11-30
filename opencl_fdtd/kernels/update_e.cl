@@ -4,7 +4,7 @@
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
  *   pmls: [{'axis': 'x', 'polarity': 'n', 'thickness': 8}, ...] list of pml dicts containing
-        axes, polarities, and thicknesses.
+ *      axes, polarities, and thicknesses.
  *
  *  OpenCL args:
  *   E, H, dt, eps, [p{01}e{np}, Psi_{xyz}{np}_E]
@@ -20,7 +20,7 @@ __global ftype *epsz = eps + ZZ;
 
 
 /*
- *   Precalclate derivatives
+ *   Precalculate derivatives
  */
 ftype dHxy = Hx[i] - Hx[i + my];
 ftype dHxz = Hx[i] - Hx[i + mz];

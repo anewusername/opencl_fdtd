@@ -5,7 +5,7 @@
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
  *   pmls: [{'axis': 'x', 'polarity': 'n', 'thickness': 8}, ...] list of pml dicts containing
-        axes, polarities, and thicknesses.
+ *      axes, polarities, and thicknesses.
  *   do_poynting: Whether to precalculate poynting vector components (boolean)
  *
  *  OpenCL args:
