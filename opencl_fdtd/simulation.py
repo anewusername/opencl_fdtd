@@ -160,6 +160,7 @@ class Simulation(object):
             pml.setdefault('mu_eff', 1.0)
             pml.setdefault('ln_R_per_layer', -1.6)
             pml.setdefault('m', 3.5)
+            pml.setdefault('cfs_alpha', 0)
             pml.setdefault('ma', 1)
 
         ctype = type_to_C(self.arg_type)
@@ -278,7 +279,7 @@ class Simulation(object):
 
             sigma_max = -pml['ln_R_per_layer'] / 2 * (pml['m'] + 1)
             kappa_max = numpy.sqrt(pml['mu_eff'] * pml['epsilon_eff'])
-            alpha_max = 0           # TODO: Nonzero alpha?
+            alpha_max = pml['cfs_alpha']
 
             def par(x):
                 scaling = ((x / (pml['thickness'])) ** pml['m'])
