@@ -7,9 +7,12 @@
  *   pmls: [{'axis': 'x', 'polarity': 'n', 'thickness': 8}, ...] list of pml dicts containing
  *      axes, polarities, and thicknesses.
  *   do_poynting: Whether to precalculate poynting vector components (boolean)
+ *   uniform_dx: If grid is uniform, uniform_dx should be the grid spacing.
+ *      Otherwise, uniform_dx should be False and [inv_de{xyz}] arrays must be supplied as
+ *      OpenCL args.
  *
  *  OpenCL args:
- *   E, H, dt, [p{xyz}{01}h{np}, Psi_{xyz}{np}_H], [oS]
+ *   E, H, dt, [inv_de{xyz}], [p{xyz}{01}h{np}, Psi_{xyz}{np}_H], [oS]
  */
 
 {{common_header}}
@@ -19,14 +22,25 @@
 /*
  *  Precalculate derivatives
  */
-ftype dExy = Ex[i + py] - Ex[i];
-ftype dExz = Ex[i + pz] - Ex[i];
+{%- if uniform_dx %}
+ftype inv_dx = 1.0 / {{uniform_dx}};
+ftype inv_dy = 1.0 / {{uniform_dx}};
+ftype inv_dz = 1.0 / {{uniform_dx}};
+{%- else %}
+ftype inv_dx = inv_dex[x];
+ftype inv_dy = inv_dey[y];
+ftype inv_dz = inv_dez[z];
+{%- endif %}
 
-ftype dEyx = Ey[i + px] - Ey[i];
-ftype dEyz = Ey[i + pz] - Ey[i];
 
-ftype dEzx = Ez[i + px] - Ez[i];
-ftype dEzy = Ez[i + py] - Ez[i];
+ftype dExy = (Ex[i + py] - Ex[i]) * inv_dy;
+ftype dExz = (Ex[i + pz] - Ex[i]) * inv_dz;
+
+ftype dEyx = (Ey[i + px] - Ey[i]) * inv_dx;
+ftype dEyz = (Ey[i + pz] - Ey[i]) * inv_dz;
+
+ftype dEzx = (Ez[i + px] - Ez[i]) * inv_dx;
+ftype dEzy = (Ez[i + py] - Ez[i]) * inv_dy;
 
 
 {% for bloch in bloch_boundaries -%}

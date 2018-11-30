@@ -61,6 +61,7 @@ class Simulation(object):
     S = None            # type: pyopencl.array.Array
     eps = None          # type: pyopencl.array.Array
     dt = None           # type: float
+    inv_dxes = None     # type: List[pyopencl.array.Array]
 
     arg_type = None     # type: numpy.float32 or numpy.float64
 
@@ -77,7 +78,8 @@ class Simulation(object):
                  epsilon: List[numpy.ndarray],
                  pmls: List[Dict[str, int or float]],
                  bloch_boundaries: List[Dict[str, int or float]] = (),
-                 dt: float = .99/numpy.sqrt(3),
+                 dxes: List[List[numpy.ndarray]] or float = None,
+                 dt: float = None,
                  initial_fields: Dict[str, List[numpy.ndarray]] = None,
                  context: pyopencl.Context = None,
                  queue: pyopencl.CommandQueue = None,
@@ -98,7 +100,7 @@ class Simulation(object):
             'ln_R_per_layer': Desired (ln(R) / thickness) value. Default -1.6.
             'm': Polynomial grading exponent. Default 3.5.
             'ma': Exponent for alpha. Default 1.
-        :param dt: Time step. Default is .99/sqrt(3).
+        :param dt: Time step. Default is min(dxes) * .99/sqrt(3).
         :param initial_E: Initial E-field (default is 0 everywhere). Same format as epsilon.
         :param initial_H: Initial H-field (default is 0 everywhere). Same format as epsilon.
         :param context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
@@ -124,7 +126,22 @@ class Simulation(object):
         self._create_context(context, queue)
         self._create_eps(epsilon)
 
-        if dt > .99/numpy.sqrt(3):
+        if dxes is None:
+            dxes = 1.0
+
+        if isinstance(dxes, (float, int)):
+            uniform_dx = dxes
+            min_dx = dxes
+        else:
+            uniform_dx = False
+            self.inv_dxes = [self._create_field(1 / dxn) for dxn in dxes[0] + dxes[1]]
+            min_dx = min(min(dxn) for dxn in dxes[0] + dxes[1])
+
+        max_dt = min_dx * .99 / numpy.sqrt(3)
+
+        if dt is None:
+            self.dt = max_dt
+        elif dt > max_dt:
             warnings.warn('Warning: unstable dt: {}'.format(dt))
         elif dt <= 0:
             raise Exception('Invalid dt: {}'.format(dt))
@@ -154,6 +171,10 @@ class Simulation(object):
         base_fields[ptr('E')] = self.E
         base_fields[ptr('H')] = self.H
         base_fields[ctype + ' dt'] = self.dt
+        if uniform_dx == False:
+            inv_dx_names = ['inv_d' + eh + r for eh in 'eh' for r in 'xyz']
+            for name, field in zip(inv_dx_names, self.inv_dxes):
+                base_fields[ptr(name)] = field
 
         eps_field = OrderedDict()
         eps_field[ptr('eps')] = self.eps
@@ -178,6 +199,7 @@ class Simulation(object):
                 'pmls': pmls,
                 'do_poynting': do_poynting,
                 'bloch': bloch_boundaries,
+                'uniform_dx': uniform_dx,
                 }
         E_source = jinja_env.get_template('update_e.cl').render(**jinja_args)
         H_source = jinja_env.get_template('update_h.cl').render(**jinja_args)

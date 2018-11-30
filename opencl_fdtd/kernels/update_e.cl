@@ -5,9 +5,12 @@
  *   common_header: Rendered contents of common.cl
  *   pmls: [{'axis': 'x', 'polarity': 'n', 'thickness': 8}, ...] list of pml dicts containing
  *      axes, polarities, and thicknesses.
+ *   uniform_dx: If grid is uniform, uniform_dx should be the grid spacing.
+ *      Otherwise, uniform_dx should be False and [inv_dh{xyz}] arrays must be supplied as
+ *      OpenCL args.
  *
  *  OpenCL args:
- *   E, H, dt, eps, [p{01}e{np}, Psi_{xyz}{np}_E]
+ *   E, H, dt, eps, [p{012}e{np}, Psi_{xyz}{np}_E], [inv_dh{xyz}]
  */
 
 {{common_header}}
@@ -19,17 +22,28 @@ __global ftype *epsy = eps + YY;
 __global ftype *epsz = eps + ZZ;
 
 
+{%- if uniform_dx %}
+ftype inv_dx = 1.0 / {{uniform_dx}};
+ftype inv_dy = 1.0 / {{uniform_dx}};
+ftype inv_dz = 1.0 / {{uniform_dx}};
+{%- else %}
+ftype inv_dx = inv_dhx[x];
+ftype inv_dy = inv_dhy[y];
+ftype inv_dz = inv_dhz[z];
+{%- endif %}
+
+
 /*
  *   Precalculate derivatives
  */
-ftype dHxy = Hx[i] - Hx[i + my];
-ftype dHxz = Hx[i] - Hx[i + mz];
+ftype dHxy = (Hx[i] - Hx[i + my]) * inv_dy;
+ftype dHxz = (Hx[i] - Hx[i + mz]) * inv_dz;
 
-ftype dHyx = Hy[i] - Hy[i + mx];
-ftype dHyz = Hy[i] - Hy[i + mz];
+ftype dHyx = (Hy[i] - Hy[i + mx]) * inv_dx;
+ftype dHyz = (Hy[i] - Hy[i + mz]) * inv_dz;
 
-ftype dHzx = Hz[i] - Hz[i + mx];
-ftype dHzy = Hz[i] - Hz[i + my];
+ftype dHzx = (Hz[i] - Hz[i + mx]) * inv_dx;
+ftype dHzy = (Hz[i] - Hz[i + my]) * inv_dy;
 
 {% for bloch in bloch_boundaries -%}
     {%- set r = bloch['axis'] -%}
