@@ -321,7 +321,6 @@ class Simulation(object):
                                    arguments=', '.join(args.keys()))
         return lambda e: update(*args.values(), wait_for=e)
 
-
     def _create_context(self, context: pyopencl.Context = None,
                         queue: pyopencl.CommandQueue = None):
         if context is None:
@@ -352,6 +351,7 @@ class Simulation(object):
             if not all((f.shape == self.shape for f in initial_value)):
                 Exception('Initial field list elements must have same shape as epsilon elements')
             return pyopencl.array.to_device(self.queue, vec(initial_value).astype(self.arg_type))
+
 
 def type_to_C(float_type) -> str:
     """
