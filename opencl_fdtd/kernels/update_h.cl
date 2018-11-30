@@ -52,10 +52,7 @@ if ({{r}} == s{{r}} - 1) {
     dE{{u ~ r}} = bloch_re * dE{{u ~ r}} + bloch_im * (F{{u}}[i + p{{u}}] - F{{u}}[i]);
     dE{{v ~ r}} = bloch_re * dE{{v ~ r}} + bloch_im * (F{{v}}[i + p{{v}}] - F{{v}}[i]);
 }
-{%- endfor %}
-
-
-
+{% endfor -%}
 
 {%- if do_poynting %}
 
@@ -93,7 +90,7 @@ ftype pHzi = 0;
         {%- set se, sh = '-', '+' -%}
     {%- else -%}
         {%- set se, sh = '+', '-' -%}
-    {%- endif -%}
+    {%- endif %}
 
 int pml_{{r ~ p}}_thickness = {{pml['thickness']}};
 
