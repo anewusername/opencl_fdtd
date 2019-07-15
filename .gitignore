@@ -1,5 +1,9 @@
 .idea/
-__pycache__
 *.h5
-*.pyc
+
+__pycache__
+*.py[cod]
+build/
+dist/
+*.egg-info/
 
