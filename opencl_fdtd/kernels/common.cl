@@ -78,7 +78,8 @@ int p{{r}} = + (int) di{{r}};
 int wrap_{{r}} = (s{{r}} - 1) * (int) di{{r}};
 if ( {{r}} == 0 ) {
   m{{r}} = wrap_{{r}};
-} else if ( {{r}} == s{{r}} - 1 ) {
+}
+if ( {{r}} == s{{r}} - 1 ) {
   p{{r}} = -wrap_{{r}};
-} 
+}
 {% endfor %}
