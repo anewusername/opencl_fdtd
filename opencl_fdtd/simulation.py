@@ -26,7 +26,7 @@ class Simulation(object):
     """
     Constructs and holds the basic FDTD operations and related fields
 
-    After constructing this object, call the (update_E, update_H, update_S) members
+    After constructing this object, call the (update_E, update_H) members
      to perform FDTD updates on the stored (E, H, S) fields:
 
         pmls = [{'axis': a, 'polarity': p} for a in 'xyz' for p in 'np']
@@ -43,8 +43,6 @@ class Simulation(object):
             # Perturb the field (i.e., add a soft current source)
             sim.E[ind] += numpy.sin(omega * t * sim.dt)
             event = sim.update_H([])
-            if sim.update_S:
-                event = sim.update_S([event])
             event.wait()
 
             with lzma.open('saved_simulation', 'wb') as f:
@@ -112,6 +110,7 @@ class Simulation(object):
         :param float_type: numpy.float32 or numpy.float64. Default numpy.float32.
         :param do_poynting: If true, enables calculation of the poynting vector, S.
                 Poynting vector calculation adds the following computational burdens:
+                    ****INACCURATE, TODO FIXME*****
                     * During update_H, ~6 extra additions/cell are performed in order to spatially
                         average E and temporally average H. These quantities are multiplied
                         (6 multiplications/cell) and then stored (6 writes/cell, cache-friendly).
@@ -226,12 +225,7 @@ class Simulation(object):
 
         S_fields = OrderedDict()
         if do_poynting:
-            S_source = jinja_env.get_template('update_s.cl').render(**jinja_args)
-            self.sources['S'] = S_source
-
-            self.oS = pyopencl.array.zeros(self.queue, self.E.shape + (2,), dtype=self.arg_type)
             self.S = pyopencl.array.zeros_like(self.E)
-            S_fields[ptr('oS')] = self.oS
             S_fields[ptr('S')] = self.S
 
         J_fields = OrderedDict()
@@ -257,8 +251,6 @@ class Simulation(object):
         '''
         self.update_E = self._create_operation(E_source, (base_fields, eps_field, pml_e_fields))
         self.update_H = self._create_operation(H_source, (base_fields, pml_h_fields, S_fields))
-        if do_poynting:
-            self.update_S = self._create_operation(S_source, (base_fields, S_fields))
         if bloch_boundaries:
             self.update_F = self._create_operation(F_source, (bloch_fields, eps_field, pml_f_fields))
             self.update_G = self._create_operation(G_source, (bloch_fields, pml_g_fields))

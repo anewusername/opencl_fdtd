@@ -6,13 +6,14 @@
  *   common_header: Rendered contents of common.cl
  *   pmls: [{'axis': 'x', 'polarity': 'n', 'thickness': 8}, ...] list of pml dicts containing
  *      axes, polarities, and thicknesses.
- *   do_poynting: Whether to precalculate poynting vector components (boolean)
+ *   do_poynting: Whether to calculate poynting vector (boolean)
+ *   do_poynting_halves: Whether to calculate half-step poynting vectors (boolean)
  *   uniform_dx: If grid is uniform, uniform_dx should be the grid spacing.
  *      Otherwise, uniform_dx should be False and [inv_de{xyz}] arrays must be supplied as
  *      OpenCL args.
  *
  *  OpenCL args:
- *   E, H, dt, [inv_de{xyz}], [p{xyz}{01}h{np}, Psi_{xyz}{np}_H], [oS]
+ *   E, H, dt, [inv_de{xyz}], [p{xyz}{01}h{np}, Psi_{xyz}{np}_H], [S], [S0, S1]
  */
 
 {{common_header}}
@@ -52,7 +53,7 @@ if ({{r}} == s{{r}} - 1) {
     dE{{u ~ r}} = bloch_re * dE{{u ~ r}} + bloch_im * (F{{u}}[i + p{{u}}] - F{{u}}[i]);
     dE{{v ~ r}} = bloch_re * dE{{v ~ r}} + bloch_im * (F{{v}}[i + p{{v}}] - F{{v}}[i]);
 }
-{% endfor -%}
+{%- endfor %}
 
 {%- if do_poynting %}
 
@@ -118,7 +119,7 @@ if ( s{{r}} > {{r}} && {{r}} >= s{{r}} - pml_{{r ~ p}}_thickness ) {
 /*
  *  Update H
  */
-{% if do_poynting -%}
+{% if do_poynting or do_poynting_halves -%}
 // Save old H for averaging
 ftype Hx_old = Hx[i];
 ftype Hy_old = Hy[i];
@@ -131,25 +132,40 @@ Hy[i] -= dt * (dExz - dEzx - pHyi);
 Hz[i] -= dt * (dEyx - dExy - pHzi);
 
 {% if do_poynting -%}
+/*
+ *  Calculate unscaled S components at ??? locations
+ *  //TODO: document S locations and types
+ */
+__global ftype *Sx = S + XX;
+__global ftype *Sy = S + YY;
+__global ftype *Sz = S + ZZ;
+
 // Average H across timesteps
 ftype aHxt = Hx[i] + Hx_old;
 ftype aHyt = Hy[i] + Hy_old;
 ftype aHzt = Hz[i] + Hz_old;
 
-/*
- *  Calculate unscaled S components at H locations
- */
-__global ftype *oSxy = oS + 0 * field_size;
-__global ftype *oSyz = oS + 1 * field_size;
-__global ftype *oSzx = oS + 2 * field_size;
-__global ftype *oSxz = oS + 3 * field_size;
-__global ftype *oSyx = oS + 4 * field_size;
-__global ftype *oSzy = oS + 5 * field_size;
+Sx[i] = Ey[i + px] * aHzt - Ez[i + px] * aHyt;
+Sy[i] = Ez[i + py] * aHxt - Ex[i + py] * aHzt;
+Sz[i] = Ex[i + pz] * aHyt - Ey[i + pz] * aHxt;
+{%- endif -%}
 
-oSxy[i] = aEyx * aHzt;
-oSxz[i] = -aEzx * aHyt;
-oSyz[i] = aEzy * aHxt;
-oSyx[i] = -aExy * aHzt;
-oSzx[i] = aExz * aHyt;
-oSzy[i] = -aEyz * aHxt;
+{% if do_poynting_halves -%}
+/*
+ *  Calculate unscaled S components at ??? locations
+ *  //TODO: document S locations and types
+ */
+__global ftype *Sx0 = S0 + XX;
+__global ftype *Sy0 = S0 + YY;
+__global ftype *Sz0 = S0 + ZZ;
+__global ftype *Sx1 = S1 + XX;
+__global ftype *Sy1 = S1 + YY;
+__global ftype *Sz1 = S1 + ZZ;
+
+Sx0[i] = Ey[i + px] * Hz_old - Ez[i + px] * Hy_old;
+Sy0[i] = Ez[i + py] * Hx_old - Ex[i + py] * Hz_old;
+Sz0[i] = Ex[i + pz] * Hy_old - Ey[i + pz] * Hx_old;
+Sx1[i] = Ey[i + px] * Hz[i] - Ez[i + px] * Hy[i];
+Sy1[i] = Ez[i + py] * Hx[i] - Ex[i + py] * Hz[i];
+Sz1[i] = Ex[i + pz] * Hy[i] - Ey[i + pz] * Hx[i];
 {%- endif -%}
