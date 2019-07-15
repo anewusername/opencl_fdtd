@@ -286,13 +286,13 @@ class Simulation(object):
             alpha_max = pml['cfs_alpha']
 
             def par(x):
-                scaling = ((x / (pml['thickness'])) ** pml['m'])
+                scaling = (x / pml['thickness']) ** pml['m']
                 sigma = scaling * sigma_max
                 kappa = 1 + scaling * (kappa_max - 1)
                 alpha = ((1 - x / pml['thickness']) ** pml['ma']) * alpha_max
                 p0 = numpy.exp(-(sigma / kappa + alpha) * self.dt)
                 p1 = sigma / (sigma + kappa * alpha) * (p0 - 1)
-                p2 = 1/kappa
+                p2 = 1 / kappa
                 return p0, p1, p2
 
             xe, xh = (numpy.arange(1, pml['thickness'] + 1, dtype=self.arg_type)[::-1] for _ in range(2))

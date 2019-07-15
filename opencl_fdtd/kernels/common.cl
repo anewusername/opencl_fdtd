@@ -2,7 +2,7 @@
 /* Common code for E, H updates
  *
  * Template parameters:
- *  ftype	type name (e.g. float or double)
+ *  ftype       type name (e.g. float or double)
  *  shape       list of 3 ints specifying shape of fields
  */
 #}

@@ -1,11 +1,11 @@
 /*
- *  Update E-field from J field 
+ *  Update E-field from J field
  *
  *  Template parameters:
  *   common_header: Rendered contents of common.cl
  *
  *  OpenCL args:
- *   E, Jr, Ji, c, s, xmin, xmax, ymin, ymax, zmin, zmax   
+ *   E, Jr, Ji, c, s, xmin, xmax, ymin, ymax, zmin, zmax
  */
 
 {{common_header}}
