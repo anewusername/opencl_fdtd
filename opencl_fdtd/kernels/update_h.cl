@@ -55,23 +55,6 @@ if ({{r}} == s{{r}} - 1) {
 }
 {%- endfor %}
 
-{%- if do_poynting %}
-
-
-/*
- *  Precalculate averaged E
- */
-ftype aExy = Ex[i + py] + Ex[i];
-ftype aExz = Ex[i + pz] + Ex[i];
-
-ftype aEyx = Ey[i + px] + Ey[i];
-ftype aEyz = Ey[i + pz] + Ey[i];
-
-ftype aEzx = Ez[i + px] + Ez[i];
-ftype aEzy = Ez[i + py] + Ez[i];
-{%- endif %}
-
-
 
 
 /*
