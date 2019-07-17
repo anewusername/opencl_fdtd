@@ -169,7 +169,7 @@ class Simulation(object):
         ctype = type_to_C(self.arg_type)
 
         def ptr(arg: str) -> str:
-            return ctype + ' * restrict ' + arg
+            return ctype + ' *' + arg
 
         base_fields = OrderedDict()
         base_fields[ptr('E')] = self.E
