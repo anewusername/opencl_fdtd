@@ -83,6 +83,7 @@ class Simulation(object):
                  queue: pyopencl.CommandQueue = None,
                  float_type: numpy.float32 or numpy.float64 = numpy.float32,
                  do_poynting: bool = True,
+                 do_poynting_halves = False,
                  do_fieldsrc: bool = False):
         """
         Initialize the simulation.
@@ -119,6 +120,7 @@ class Simulation(object):
                         in complexity.
                     * GPU memory requirements are approximately doubled, since S and the intermediate
                         products must be stored.
+        :param do_poynting_halves: TODO DOCUMENT
         """
         if initial_fields is None:
             initial_fields = {}
@@ -202,6 +204,7 @@ class Simulation(object):
                 'common_header': common_source,
                 'pmls': pmls,
                 'do_poynting': do_poynting,
+                'do_poynting_halves': do_poynting_halves,
                 'bloch': bloch_boundaries,
                 'uniform_dx': uniform_dx,
                 }
@@ -227,6 +230,12 @@ class Simulation(object):
         if do_poynting:
             self.S = pyopencl.array.zeros_like(self.E)
             S_fields[ptr('S')] = self.S
+        if do_poynting_halves:
+            self.S0 = pyopencl.array.zeros_like(self.E)
+            self.S1 = pyopencl.array.zeros_like(self.E)
+            S_fields[ptr('S0')] = self.S0
+            S_fields[ptr('S1')] = self.S1
+
 
         J_fields = OrderedDict()
         if do_fieldsrc:
