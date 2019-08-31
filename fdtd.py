@@ -7,6 +7,7 @@ See main() for simulation setup.
 import sys
 import time
 import logging
+import pyopencl
 
 import numpy
 import lzma
@@ -82,7 +83,7 @@ def perturbed_l3(a: float, radius: float, **kwargs) -> Pattern:
 
 
 def main():
-    max_t = 8000            # number of timesteps
+    max_t = 4000            # number of timesteps
 
     dx = 25                 # discretization (nm/cell)
     pml_thickness = 8       # (number of cells)
@@ -101,33 +102,37 @@ def main():
     n_air = 1.0   # air
 
     # Half-dimensions of the simulation grid
-    xy_max = (xy_size + 1) * a * [1, numpy.sqrt(3)/2]
-    z_max = 1.6 * a
-    xyz_max = numpy.hstack((xy_max, z_max)) + pml_thickness * dx
-
-    # Coordinates of the edges of the cells.
-    #  The fdtd package can only do square grids at the moment.
-    half_edge_coords = [numpy.arange(dx/2, m + dx, step=dx) for m in xyz_max]
-    edge_coords = [numpy.hstack((-h[::-1], h)) for h in half_edge_coords]
+#    xy_max = (xy_size + 1) * a * [1, numpy.sqrt(3)/2]
+#    z_max = 1.6 * a
+#    xyz_max = numpy.hstack((xy_max, z_max)) + pml_thickness * dx
+#
+#    # Coordinates of the edges of the cells.
+#    #  The fdtd package can only do square grids at the moment.
+#    half_edge_coords = [numpy.arange(dx/2, m + dx, step=dx) for m in xyz_max]
+#    edge_coords = [numpy.hstack((-h[::-1], h)) for h in half_edge_coords]
+    edge_coords = [numpy.arange(-100.5, 101), numpy.arange(-1, 1), numpy.arange(-100.5, 101)]
+#    edge_coords = [numpy.arange(-100.5, 101), numpy.arange(-100.5, 101), numpy.arange(-1, 1)]
 
     # #### Create the grid, mask, and draw the device ####
     grid = gridlock.Grid(edge_coords, initial=n_air**2, num_grids=3)
-    grid.draw_slab(surface_normal=gridlock.Direction.z,
-                   center=[0, 0, 0],
-                   thickness=th,
-                   eps=n_slab**2)
-    mask = perturbed_l3(a, r)
-
-    grid.draw_polygons(surface_normal=gridlock.Direction.z,
-                       center=[0, 0, 0],
-                       thickness=2 * th,
-                       eps=n_air**2,
-                       polygons=mask.as_polygons())
+#    grid.draw_slab(surface_normal=gridlock.Direction.z,
+#                   center=[0, 0, 0],
+#                   thickness=th,
+#                   eps=n_slab**2)
+#    mask = perturbed_l3(a, r)
+#
+#    grid.draw_polygons(surface_normal=gridlock.Direction.z,
+#                       center=[0, 0, 0],
+#                       thickness=2 * th,
+#                       eps=n_air**2,
+#                       polygons=mask.as_polygons())
 
     logger.info('grid shape: {}'.format(grid.shape))
     # #### Create the simulation grid ####
+#    pmls = [{'axis': a, 'polarity': p, 'thickness': pml_thickness}
+#            for a in 'xyz' for p in 'np']
     pmls = [{'axis': a, 'polarity': p, 'thickness': pml_thickness}
-            for a in 'xyz' for p in 'np']
+            for a in 'xz' for p in 'np']
     #bloch = [{'axis': a, 'real': 1, 'imag': 0} for a in 'x']
     bloch = []
     sim = Simulation(grid.grids, do_poynting=True, pmls=pmls, bloch_boundaries=bloch)
@@ -155,24 +160,67 @@ def main():
             f.write('\n=====================G=====================\n')
             f.write(sim.sources['G'])
 
+
+    planes = numpy.empty((max_t, 4))
+    planes2 = numpy.empty((max_t, 4))
+    Ectr = numpy.empty(max_t)
+    u = numpy.empty(max_t)
+    ui = numpy.empty(max_t)
     # #### Run a bunch of iterations ####
     # event = sim.whatever([prev_event]) indicates that sim.whatever should be queued
     #  immediately and run once prev_event is finished.
     start = time.perf_counter()
     for t in range(max_t):
         e = sim.update_E([])
-        if bloch:
-            e = sim.update_F([e])
+#        if bloch:
+#            e = sim.update_F([e])
         e.wait()
 
         ind = numpy.ravel_multi_index(tuple(grid.shape//2), dims=grid.shape, order='C') + numpy.prod(grid.shape)
-        sim.E[ind] += field_source(t)
+#        sim.E[ind] += field_source(t)
+        if t == 2:
+            sim.E[ind] += 1e6
+
+        h_old = sim.H.copy()
+
         e = sim.update_H([])
-        if bloch:
-            e = sim.update_G([e])
-        if sim.update_S:
-            e = sim.update_S([e])
+#        if bloch:
+#            e = sim.update_G([e])
         e.wait()
+
+        S = sim.S.get().reshape(grid.grids.shape) * sim.dt * dx * dx *dx
+        m = 30
+        planes[t] = (
+            S[0][+pml_thickness+2, :, pml_thickness+3:-pml_thickness-3].sum(),
+            S[0][-pml_thickness-2, :, pml_thickness+3:-pml_thickness-3].sum(),
+            S[2][pml_thickness+2:-pml_thickness-2, :, +pml_thickness+2].sum(),
+            S[2][pml_thickness+2:-pml_thickness-2, :, -pml_thickness-2].sum(),
+            )
+        planes2[t] = (
+            S[0][grid.shape[0]//2-1, 0, grid.shape[2]//2].sum(),
+            S[0][grid.shape[0]//2  , 0, grid.shape[2]//2].sum(),
+            S[2][grid.shape[0]//2  , 0, grid.shape[2]//2-1].sum(),
+            S[2][grid.shape[0]//2  , 0, grid.shape[2]//2].sum(),
+            )
+
+#        planes[t] = (
+#            S[0][+pml_thickness+m, pml_thickness+m+1:-pml_thickness-m, :].sum(),
+#            S[0][-pml_thickness-m, pml_thickness+m+1:-pml_thickness-m, :].sum(),
+#            S[1][pml_thickness+1+m:-pml_thickness-m, +pml_thickness+m, :].sum(),
+#            S[1][pml_thickness+1+m:-pml_thickness-m, -pml_thickness-m, :].sum(),
+#            )
+#        planes2[t] = (
+#            S[0][grid.shape[0]//2-1, grid.shape[1]//2  , 0].sum(),
+#            S[0][grid.shape[0]//2  , grid.shape[1]//2  , 0].sum(),
+#            S[1][grid.shape[0]//2  , grid.shape[1]//2-1, 0].sum(),
+#            S[1][grid.shape[0]//2  , grid.shape[1]//2  , 0].sum(),
+#            )
+        Ectr[t] = sim.E[ind].get()
+        u[t] = pyopencl.array.sum(sim.E * sim.E * sim.eps + h_old * sim.H).get() * dx * dx * dx
+        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(grid.grids.shape).get()[:, pml_thickness+m:-pml_thickness-m, :,
+                                                                                             pml_thickness+m:-pml_thickness-m].sum() * dx * dx * dx
+#        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(grid.grids.shape).get()[:, pml_thickness+m:-pml_thickness-m,
+#                                                                                             pml_thickness+m:-pml_thickness-m, :].sum() * dx * dx * dx
 
         if t % 100 == 0:
             logger.info('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
@@ -185,6 +233,13 @@ def main():
             'grid': grid,
             'E': unvec(sim.E.get()),
             'H': unvec(sim.H.get()),
+            'dt': sim.dt,
+            'dx': dx,
+            'planes': planes,
+            'planes2': planes2,
+            'Ectr': Ectr,
+            'u': u,
+            'ui': ui,
             }
         if sim.S is not None:
             d['S'] = unvec(sim.S.get())

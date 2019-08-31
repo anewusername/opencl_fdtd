@@ -375,3 +375,20 @@ def type_to_C(float_type) -> str:
     else:
         raise Exception('Unsupported type')
     return arg_type
+
+#            def par(x):
+#                scaling = ((x / (pml['thickness'])) ** pml['m'])
+#                print('scaling', scaling)
+#                print('sigma_max * dt / 2', sigma_max * self.dt / 2)
+#                print('kappa_max', kappa_max)
+#                print('m', pml['m'])
+#                sigma = scaling * sigma_max
+#                kappa = 1 + scaling * (kappa_max - 1)
+#                alpha = ((1 - x / pml['thickness']) ** pml['ma']) * alpha_max
+#                p0 = 1/(1 + self.dt * (alpha + sigma / kappa))
+#                p1 = self.dt * sigma / kappa * p0
+#                p2 = 1/kappa
+#                print(p0.min(), p0.max(), p1.min(), p1.max())
+#                return p0, p1, p2
+#
+#
