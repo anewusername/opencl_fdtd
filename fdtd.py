@@ -17,7 +17,7 @@ from opencl_fdtd import Simulation
 from masque import Pattern, shapes
 import gridlock
 import pcgen
-import fdfd_tools
+import meanas
 
 
 __author__ = 'Jan Petykiewicz'
@@ -228,7 +228,7 @@ def main():
 
     with lzma.open('saved_simulation', 'wb') as f:
         def unvec(f):
-            return fdfd_tools.unvec(f, grid.shape)
+            return meanas.unvec(f, grid.shape)
         d = {
             'grid': grid,
             'E': unvec(sim.E.get()),
