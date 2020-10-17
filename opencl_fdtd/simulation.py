@@ -26,7 +26,7 @@ class Simulation(object):
     """
     Constructs and holds the basic FDTD operations and related fields
 
-    After constructing this object, call the (update_E, update_H) members
+    After constructing this object, call the (update_E, update_H, update_S) members
      to perform FDTD updates on the stored (E, H, S) fields:
 
         pmls = [{'axis': a, 'polarity': p} for a in 'xyz' for p in 'np']
@@ -43,6 +43,8 @@ class Simulation(object):
             # Perturb the field (i.e., add a soft current source)
             sim.E[ind] += numpy.sin(omega * t * sim.dt)
             event = sim.update_H([])
+            if sim.update_S:
+                event = sim.update_S([event])
             event.wait()
 
             with lzma.open('saved_simulation', 'wb') as f:
