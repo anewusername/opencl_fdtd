@@ -1,0 +1,29 @@
+[flake8]
+ignore =
+    # E501 line too long
+    E501,
+    # W391 newlines at EOF
+    W391,
+    # E241 multiple spaces after comma
+    E241,
+    # E302 expected 2 newlines
+    E302,
+    # W503 line break before binary operator (to be deprecated)
+    W503,
+    # E265 block comment should start with '# '
+    E265,
+    # E123 closing bracket does not match indentation of opening bracket's line
+    E123,
+    # E124 closing bracket does not match visual indentation
+    E124,
+    # E221 multiple spaces before operator
+    E221,
+    # E201 whitespace after '['
+    E201,
+    # E741 ambiguous variable name 'I'
+    E741,
+
+
+per-file-ignores =
+    # F401 import without use
+    */__init__.py: F401,

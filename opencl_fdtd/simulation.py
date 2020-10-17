@@ -85,7 +85,7 @@ class Simulation(object):
                  queue: pyopencl.CommandQueue = None,
                  float_type: numpy.float32 or numpy.float64 = numpy.float32,
                  do_poynting: bool = True,
-                 do_poynting_halves = False,
+                 do_poynting_halves: bool = False,
                  do_fieldsrc: bool = False):
         """
         Initialize the simulation.
@@ -179,7 +179,7 @@ class Simulation(object):
         base_fields[ptr('E')] = self.E
         base_fields[ptr('H')] = self.H
         base_fields[ctype + ' dt'] = self.dt
-        if uniform_dx == False:
+        if uniform_dx is False:
             inv_dx_names = ['inv_d' + eh + r for eh in 'eh' for r in 'xyz']
             for name, field in zip(inv_dx_names, self.inv_dxes):
                 base_fields[ptr(name)] = field
@@ -199,17 +199,17 @@ class Simulation(object):
             bloch_fields[ptr('G')] = self.H
 
         common_source = jinja_env.get_template('common.cl').render(
-                ftype=ctype,
-                shape=self.shape,
-                )
+            ftype=ctype,
+            shape=self.shape,
+            )
         jinja_args = {
-                'common_header': common_source,
-                'pmls': pmls,
-                'do_poynting': do_poynting,
-                'do_poynting_halves': do_poynting_halves,
-                'bloch': bloch_boundaries,
-                'uniform_dx': uniform_dx,
-                }
+            'common_header': common_source,
+            'pmls': pmls,
+            'do_poynting': do_poynting,
+            'do_poynting_halves': do_poynting_halves,
+            'bloch': bloch_boundaries,
+            'uniform_dx': uniform_dx,
+            }
         E_source = jinja_env.get_template('update_e.cl').render(**jinja_args)
         H_source = jinja_env.get_template('update_h.cl').render(**jinja_args)
         self.sources['E'] = E_source
@@ -227,7 +227,6 @@ class Simulation(object):
             self.sources['F'] = F_source
             self.sources['G'] = G_source
 
-
         S_fields = OrderedDict()
         if do_poynting:
             self.S = pyopencl.array.zeros_like(self.E)
@@ -238,7 +237,6 @@ class Simulation(object):
             S_fields[ptr('S0')] = self.S0
             S_fields[ptr('S1')] = self.S1
 
-
         J_fields = OrderedDict()
         if do_fieldsrc:
             J_source = jinja_env.get_template('update_j.cl').render(**jinja_args)
@@ -248,7 +246,6 @@ class Simulation(object):
             self.Jr = pyopencl.array.zeros_like(self.E)
             J_fields[ptr('Jr')] = self.Jr
             J_fields[ptr('Ji')] = self.Ji
-
 
         '''
         PML
@@ -273,9 +270,9 @@ class Simulation(object):
                                        arguments=', '.join(list(args.keys()) + var_args))
             self.update_J = lambda e, *a: update(*args.values(), *a, wait_for=e)
 
-
     def _create_pmls(self, pmls):
         ctype = type_to_C(self.arg_type)
+
         def ptr(arg: str) -> str:
             return ctype + ' *' + arg
 
