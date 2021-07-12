@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 from setuptools import setup, find_packages
-import opencl_fdtd
 
 with open('README.md', 'r') as f:
     long_description = f.read()
 
+with open('opencl_fdtd/VERSION.py', 'rt') as f:
+    version = f.readlines()[2].strip()
+
 setup(name='opencl_fdtd',
-      version=opencl_fdtd.version,
+      version=version,
       description='OpenCL FDTD solver',
       long_description=long_description,
       long_description_content_type='text/markdown',
