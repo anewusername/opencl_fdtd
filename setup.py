@@ -24,7 +24,7 @@ setup(name='opencl_fdtd',
             'numpy',
             'pyopencl',
             'jinja2',
-            'fdfd_tools>=0.3',
+            'meanas>=0.3',
       ],
       extras_require={
       },
