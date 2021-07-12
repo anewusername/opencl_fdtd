@@ -228,7 +228,7 @@ def main():
 
     with lzma.open('saved_simulation', 'wb') as f:
         def unvec(f):
-            return meanas.unvec(f, grid.shape)
+            return meanas.fdmath.unvec(f, grid.shape)
         d = {
             'grid': grid,
             'E': unvec(sim.E.get()),

@@ -48,7 +48,7 @@ class Simulation(object):
             event.wait()
 
             with lzma.open('saved_simulation', 'wb') as f:
-                dill.dump(fdfd_tools.unvec(sim.E.get(), grid.shape), f)
+                dill.dump(meanas.fdmath.unvec(sim.E.get(), grid.shape), f)
 
     Code in the form
         event2 = sim.update_H([event0, event1])
