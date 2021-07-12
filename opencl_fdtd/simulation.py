@@ -357,7 +357,7 @@ class Simulation(object):
             return pyopencl.array.to_device(self.queue, vec(initial_value).astype(self.arg_type))
 
 
-def type_to_C(float_type) -> str:
+def type_to_C(float_type: numpy.dtype) -> str:
     """
     Returns a string corresponding to the C equivalent of a numpy type.
     Only works for float16, float32, float64.
