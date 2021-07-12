@@ -12,7 +12,7 @@ import pyopencl
 import pyopencl.array
 from pyopencl.elementwise import ElementwiseKernel
 
-from meanas import vec
+from meanas.fdmath import vec
 
 
 __author__ = 'Jan Petykiewicz'
