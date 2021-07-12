@@ -123,14 +123,14 @@ __global ftype *Sx = S + XX;
 __global ftype *Sy = S + YY;
 __global ftype *Sz = S + ZZ;
 
-// Average H across timesteps
-ftype aHxt = Hx[i] + Hx_old;
-ftype aHyt = Hy[i] + Hy_old;
-ftype aHzt = Hz[i] + Hz_old;
+// Sum old and new H
+ftype sHxt = Hx[i] + Hx_old;
+ftype sHyt = Hy[i] + Hy_old;
+ftype sHzt = Hz[i] + Hz_old;
 
-Sx[i] = Ey[i + px] * aHzt - Ez[i + px] * aHyt;
-Sy[i] = Ez[i + py] * aHxt - Ex[i + py] * aHzt;
-Sz[i] = Ex[i + pz] * aHyt - Ey[i + pz] * aHxt;
+Sx[i] = Ey[i + px] * sHzt - Ez[i + px] * sHyt;
+Sy[i] = Ez[i + py] * sHxt - Ex[i + py] * sHzt;
+Sz[i] = Ex[i + pz] * sHyt - Ey[i + pz] * sHxt;
 {%- endif -%}
 
 {% if do_poynting_halves -%}
