@@ -23,7 +23,7 @@ jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
 
 
 class Simulation(object):
-    """
+    r"""
     Constructs and holds the basic FDTD operations and related fields
 
     After constructing this object, call the (update_E, update_H, update_S) members
@@ -91,39 +91,36 @@ class Simulation(object):
         """
         Initialize the simulation.
 
-        :param epsilon: List containing [eps_r,xx, eps_r,yy, eps_r,zz], where each element is a Yee-shifted ndarray
+        Args:
+            epsilon: List containing [eps_r,xx, eps_r,yy, eps_r,zz], where each element is a Yee-shifted ndarray
                 spanning the simulation domain. Relative epsilon is used.
-        :param pmls: List of dicts with keys:
-            'axis': One of 'x', 'y', 'z'.
-            'direction': One of 'n', 'p'.
-            'thickness': Number of layers, default 8.
-            'epsilon_eff': Effective epsilon to match to. Default 1.0.
-            'mu_eff': Effective mu to match to. Default 1.0.
-            'ln_R_per_layer': Desired (ln(R) / thickness) value. Default -1.6.
-            'm': Polynomial grading exponent. Default 3.5.
-            'ma': Exponent for alpha. Default 1.
-        :param bloch_boundaries: List of dicts with keys:
-            'axis': One of 'x', 'y', 'z'.
-            'real': Real part of bloch phase factor (i.e. real(exp(i * phase)))
-            'imag': Imaginary part of bloch phase factor (i.e. imag(exp(i * phase)))
-        :param dt: Time step. Default is min(dxes) * .99/sqrt(3).
-        :param initial_fields: Dict with optional keys ('E', 'H', 'F', 'G') containing initial values for the
-            specified fields (default is 0 everywhere). Fields have same format as epsilon.
-        :param context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
-        :param queue: pyOpenCL command queue. If not given, pyopencl.CommandQueue(context) is called.
-        :param float_type: numpy.float32 or numpy.float64. Default numpy.float32.
-        :param do_poynting: If true, enables calculation of the poynting vector, S.
+            pmls: List of dicts with keys:
+                'axis': One of 'x', 'y', 'z'.
+                'direction': One of 'n', 'p'.
+                'thickness': Number of layers, default 8.
+                'epsilon_eff': Effective epsilon to match to. Default 1.0.
+                'mu_eff': Effective mu to match to. Default 1.0.
+                'ln_R_per_layer': Desired (ln(R) / thickness) value. Default -1.6.
+                'm': Polynomial grading exponent. Default 3.5.
+                'ma': Exponent for alpha. Default 1.
+            bloch_boundaries: List of dicts with keys:
+                'axis': One of 'x', 'y', 'z'.
+                'real': Real part of bloch phase factor (i.e. real(exp(i * phase)))
+                'imag': Imaginary part of bloch phase factor (i.e. imag(exp(i * phase)))
+            dt: Time step. Default is min(dxes) * .99/sqrt(3).
+            initial_fields: Dict with optional keys ('E', 'H', 'F', 'G') containing initial values for the
+                specified fields (default is 0 everywhere). Fields have same format as epsilon.
+            context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
+            queue: pyOpenCL command queue. If not given, pyopencl.CommandQueue(context) is called.
+            float_type: numpy.float32 or numpy.float64. Default numpy.float32.
+            do_poynting: If true, enables calculation of the poynting vector, S.
                 Poynting vector calculation adds the following computational burdens:
-                    ****INACCURATE, TODO FIXME*****
-                    * During update_H, ~6 extra additions/cell are performed in order to spatially
-                        average E and temporally average H. These quantities are multiplied
-                        (6 multiplications/cell) and then stored (6 writes/cell, cache-friendly).
-                    * update_S performs a discrete cross product using the precalculated products
-                        from update_H. This is not nice to the cache and similar to e.g. update_E
-                        in complexity.
-                    * GPU memory requirements are approximately doubled, since S and the intermediate
-                        products must be stored.
-        :param do_poynting_halves: TODO DOCUMENT
+                * During update_H, ~6 extra additions/cell are performed in order to temporally
+                    sum H. The results are then multiplied by E (6 multiplications/cell) and
+                    then stored (6 writes/cell, cache-friendly). The E-field components are
+                    reused from the H-field update and do not require additional H
+                * GPU memory requirements increase by 50% (for storing S)
+            do_poynting_halves: TODO DOCUMENT
         """
         if initial_fields is None:
             initial_fields = {}
