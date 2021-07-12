@@ -86,7 +86,8 @@ class Simulation(object):
                  float_type: numpy.float32 or numpy.float64 = numpy.float32,
                  do_poynting: bool = True,
                  do_poynting_halves: bool = False,
-                 do_fieldsrc: bool = False):
+                 do_fieldsrc: bool = False,
+                 ) -> None:
         """
         Initialize the simulation.
 
