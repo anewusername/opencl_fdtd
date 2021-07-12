@@ -31,8 +31,8 @@ class Simulation(object):
 
         pmls = [{'axis': a, 'polarity': p} for a in 'xyz' for p in 'np']
         sim = Simulation(grid.grids, do_poynting=True, pmls=pmls)
-        with open('sources.c', 'w') as f:
-            f.write('{}'.format(sim.sources))
+        with open('sources.c', 'wt') as f:
+            f.write(repr(sim.sources))
 
         for t in range(max_t):
             sim.update_E([]).wait()
