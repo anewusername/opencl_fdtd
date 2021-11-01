@@ -114,14 +114,17 @@ def main():
 #    edge_coords = [numpy.arange(-100.5, 101), numpy.arange(-100.5, 101), numpy.arange(-1, 1)]
 
     # #### Create the grid, mask, and draw the device ####
-    grid = gridlock.Grid(edge_coords, initial=n_air**2, num_grids=3)
-#    grid.draw_slab(surface_normal=gridlock.Direction.z,
+    grid = gridlock.Grid(edge_coords)
+    epsilon = grid.allocate(n_air**2)
+#    grid.draw_slab(epsilon,
+#                   surface_normal=2,
 #                   center=[0, 0, 0],
 #                   thickness=th,
 #                   eps=n_slab**2)
 #    mask = perturbed_l3(a, r)
 #
-#    grid.draw_polygons(surface_normal=gridlock.Direction.z,
+#    grid.draw_polygons(epsilon,
+#                       surface_normal=2,
 #                       center=[0, 0, 0],
 #                       thickness=2 * th,
 #                       eps=n_air**2,
@@ -135,7 +138,7 @@ def main():
             for a in 'xz' for p in 'np']
     #bloch = [{'axis': a, 'real': 1, 'imag': 0} for a in 'x']
     bloch = []
-    sim = Simulation(grid.grids, do_poynting=True, pmls=pmls, bloch_boundaries=bloch)
+    sim = Simulation(epsilon, do_poynting=True, pmls=pmls, bloch_boundaries=bloch)
 
     # Source parameters and function
     w = 2 * numpy.pi * dx / wl
@@ -188,7 +191,7 @@ def main():
 #            e = sim.update_G([e])
         e.wait()
 
-        S = sim.S.get().reshape(grid.grids.shape) * sim.dt * dx * dx *dx
+        S = sim.S.get().reshape(epsilon.shape) * sim.dt * dx * dx *dx
         m = 30
         planes[t] = (
             S[0][+pml_thickness+2, :, pml_thickness+3:-pml_thickness-3].sum(),
@@ -217,10 +220,10 @@ def main():
 #            )
         Ectr[t] = sim.E[ind].get()
         u[t] = pyopencl.array.sum(sim.E * sim.E * sim.eps + h_old * sim.H).get() * dx * dx * dx
-        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(grid.grids.shape).get()[:, pml_thickness+m:-pml_thickness-m, :,
-                                                                                             pml_thickness+m:-pml_thickness-m].sum() * dx * dx * dx
-#        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(grid.grids.shape).get()[:, pml_thickness+m:-pml_thickness-m,
-#                                                                                             pml_thickness+m:-pml_thickness-m, :].sum() * dx * dx * dx
+        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(epsilon.shape).get()[:, pml_thickness+m:-pml_thickness-m, :,
+                                                                                            pml_thickness+m:-pml_thickness-m].sum() * dx * dx * dx
+#        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(epsilon.shape).get()[:, pml_thickness+m:-pml_thickness-m,
+#                                                                                            pml_thickness+m:-pml_thickness-m, :].sum() * dx * dx * dx
 
         if t % 100 == 0:
             logger.info('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
@@ -231,6 +234,7 @@ def main():
             return meanas.fdmath.unvec(f, grid.shape)
         d = {
             'grid': grid,
+            'epsilon': epsilon,
             'E': unvec(sim.E.get()),
             'H': unvec(sim.H.get()),
             'dt': sim.dt,
