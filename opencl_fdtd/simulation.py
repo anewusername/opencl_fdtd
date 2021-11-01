@@ -19,7 +19,7 @@ __author__ = 'Jan Petykiewicz'
 
 
 # Create jinja2 env on module load
-jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
+jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__.split('.')[0], 'kernels'))
 
 
 class Simulation(object):
