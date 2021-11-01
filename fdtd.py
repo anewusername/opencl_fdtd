@@ -130,7 +130,7 @@ def main():
 #                       eps=n_air**2,
 #                       polygons=mask.as_polygons())
 
-    logger.info('grid shape: {}'.format(grid.shape))
+    logger.info(f'grid shape: {grid.shape}')
     # #### Create the simulation grid ####
 #    pmls = [{'axis': a, 'polarity': p, 'thickness': pml_thickness}
 #            for a in 'xyz' for p in 'np']
