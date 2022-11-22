@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opencl_fdtd"
+description = "OpenCL FDTD solver"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+authors = [
+    { name="Jan Petykiewicz", email="jan@mpxd.net" },
+    ]
+homepage = "https://mpxd.net/code/jan/opencl_fdtd"
+repository = "https://mpxd.net/code/jan/opencl_fdtd"
+keywords = [
+    "FDTD",
+    "finite",
+    "difference",
+    "time",
+    "domain",
+    "simulation",
+    "optics",
+    "electromagnetic",
+    "dielectric",
+    ]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Topic :: Scientific/Engineering",
+    ]
+requires-python = ">=3.8"
+dynamic = ["version"]
+dependencies = [
+    "numpy~=1.21",
+    "pyopencl",
+    "jinja2",
+    "meanas>=0.3",
+    ]
+
+[tool.hatch.version]
+path = "opencl_fdtd/__init__.py"
+
