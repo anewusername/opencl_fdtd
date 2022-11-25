@@ -2,9 +2,10 @@
 Class for constructing and holding the basic FDTD operations and fields
 """
 
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Type, Union, Optional, Sequence
 from collections import OrderedDict
 import numpy
+from numpy.typing import NDArray
 import jinja2
 import warnings
 
@@ -31,8 +32,8 @@ class Simulation(object):
 
         pmls = [{'axis': a, 'polarity': p} for a in 'xyz' for p in 'np']
         sim = Simulation(grid.grids, do_poynting=True, pmls=pmls)
-        with open('sources.c', 'wt') as f:
-            f.write(repr(sim.sources))
+        with open('sources.c', 'w') as f:
+            f.write(f'{sim.sources}')
 
         for t in range(max_t):
             sim.update_E([]).wait()
@@ -56,38 +57,38 @@ class Simulation(object):
      event0 and event1 to occur (i.e. previous operations to finish) before starting execution.
      event2 can then be used to prepare further operations to be run after update_H.
     """
-    E = None            # type: pyopencl.array.Array
-    H = None            # type: pyopencl.array.Array
-    S = None            # type: pyopencl.array.Array
-    eps = None          # type: pyopencl.array.Array
-    dt = None           # type: float
-    inv_dxes = None     # type: List[pyopencl.array.Array]
+    E: pyopencl.array.Array
+    H: pyopencl.array.Array
+    S: pyopencl.array.Array
+    eps: pyopencl.array.Array
+    dt: float
+    inv_dxes: List[pyopencl.array.Array]
 
-    arg_type = None     # type: numpy.float32 or numpy.float64
+    arg_type: Type
 
-    context = None      # type: pyopencl.Context
-    queue = None        # type: pyopencl.CommandQueue
+    context: pyopencl.Context
+    queue: pyopencl.CommandQueue
 
-    update_E = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    update_H = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    update_S = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    update_J = None     # type: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    sources = None      # type: Dict[str, str]
+    update_E: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    update_H: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    update_S: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    update_J: Callable[[List[pyopencl.Event]], pyopencl.Event]
+    sources: Dict[str, str]
 
-    def __init__(self,
-                 epsilon: List[numpy.ndarray],
-                 pmls: List[Dict[str, int or float]],
-                 bloch_boundaries: List[Dict[str, int or float]] = (),
-                 dxes: List[List[numpy.ndarray]] or float = None,
-                 dt: float = None,
-                 initial_fields: Dict[str, List[numpy.ndarray]] = None,
-                 context: pyopencl.Context = None,
-                 queue: pyopencl.CommandQueue = None,
-                 float_type: numpy.float32 or numpy.float64 = numpy.float32,
-                 do_poynting: bool = True,
-                 do_poynting_halves: bool = False,
-                 do_fieldsrc: bool = False,
-                 ) -> None:
+    def __init__(
+            self,
+            epsilon: NDArray,
+            pmls: Sequence[Dict[str, float]],
+            bloch_boundaries: Sequence[Dict[str, float]] = (),
+            dxes: Union[List[List[NDArray]], float, None] = None,
+            dt: Optional[float] = None,
+            initial_fields: Optional[Dict[str, NDArray]] = None,
+            context: Optional[pyopencl.Context] = None,
+            queue: Optional[pyopencl.CommandQueue] = None,
+            float_type: Type = numpy.float32,
+            do_poynting: bool = True,
+            do_fieldsrc: bool = False,
+            ) -> None:
         """
         Initialize the simulation.
 
@@ -113,14 +114,13 @@ class Simulation(object):
             context: pyOpenCL context. If not given, pyopencl.create_some_context(False) is called.
             queue: pyOpenCL command queue. If not given, pyopencl.CommandQueue(context) is called.
             float_type: numpy.float32 or numpy.float64. Default numpy.float32.
-            do_poynting: If true, enables calculation of the poynting vector, S.
+            do_poynting: If True, enables calculation of the poynting vector, S.
                 Poynting vector calculation adds the following computational burdens:
-                * During update_H, ~6 extra additions/cell are performed in order to temporally
-                    sum H. The results are then multiplied by E (6 multiplications/cell) and
+                * During update_H, 12 extra additions/cell are performed in order to temporally
+                    sum E and H. The results are then multiplied by E (6 multiplications/cell) and
                     then stored (6 writes/cell, cache-friendly). The E-field components are
                     reused from the H-field update and do not require additional H
                 * GPU memory requirements increase by 50% (for storing S)
-            do_poynting_halves: TODO DOCUMENT
         """
         if initial_fields is None:
             initial_fields = {}
@@ -147,9 +147,9 @@ class Simulation(object):
         if dt is None:
             self.dt = max_dt
         elif dt > max_dt:
-            warnings.warn('Warning: unstable dt: {}'.format(dt))
+            warnings.warn(f'Warning: unstable dt: {dt}')
         elif dt <= 0:
-            raise Exception('Invalid dt: {}'.format(dt))
+            raise Exception(f'Invalid dt: {dt}')
         else:
             self.dt = dt
 
@@ -216,10 +216,12 @@ class Simulation(object):
         if bloch_boundaries:
             bloch_args = jinja_args.copy()
             bloch_args['do_poynting'] = False
-            bloch_args['bloch'] = [{'axis': b['axis'],
-                                    'real': b['imag'],
-                                    'imag': b['real']}
-                                   for b in bloch_boundaries]
+            bloch_args['bloch'] = [
+                {'axis': b['axis'],
+                 'real': b['imag'],
+                 'imag': b['real'],
+                }
+                for b in bloch_boundaries]
             F_source = jinja_env.get_template('update_e.cl').render(**bloch_args)
             G_source = jinja_env.get_template('update_h.cl').render(**bloch_args)
             self.sources['F'] = F_source
@@ -316,15 +318,22 @@ class Simulation(object):
                 pml_h_fields[ptr(nh)] = pyopencl.array.zeros(self.queue, tuple(psi_shape), dtype=self.arg_type)
         return pml_e_fields, pml_h_fields
 
-    def _create_operation(self, source, args_fields):
+    def _create_operation(self, source, args_fields) -> Callable[..., pyopencl.Event]:
         args = OrderedDict()
-        [args.update(d) for d in args_fields]
-        update = ElementwiseKernel(self.context, operation=source,
-                                   arguments=', '.join(args.keys()))
+        for d in args_fields:
+            args.update(d)
+        update = ElementwiseKernel(
+            self.context,
+            operation=source,
+            arguments=', '.join(args.keys()),
+            )
         return lambda e: update(*args.values(), wait_for=e)
 
-    def _create_context(self, context: pyopencl.Context = None,
-                        queue: pyopencl.CommandQueue = None):
+    def _create_context(
+            self,
+            context: Optional[pyopencl.Context] = None,
+            queue: Optional[pyopencl.CommandQueue] = None,
+            ) -> None:
         if context is None:
             self.context = pyopencl.create_some_context()
         else:
@@ -335,16 +344,16 @@ class Simulation(object):
         else:
             self.queue = queue
 
-    def _create_eps(self, epsilon: List[numpy.ndarray]):
+    def _create_eps(self, epsilon: NDArray) -> pyopencl.array.Array:
         if len(epsilon) != 3:
             raise Exception('Epsilon must be a list with length of 3')
         if not all((e.shape == epsilon[0].shape for e in epsilon[1:])):
             raise Exception('All epsilon grids must have the same shape. Shapes are {}', [e.shape for e in epsilon])
         if not epsilon[0].shape == self.shape:
-            raise Exception('Epsilon shape mismatch. Expected {}, got {}'.format(self.shape, epsilon[0].shape))
+            raise Exception(f'Epsilon shape mismatch. Expected {self.shape}, got {epsilon[0].shape}')
         self.eps = pyopencl.array.to_device(self.queue, vec(epsilon).astype(self.arg_type))
 
-    def _create_field(self, initial_value: List[numpy.ndarray] = None):
+    def _create_field(self, initial_value: Optional[NDArray] = None) -> pyopencl.array.Array:
         if initial_value is None:
             return pyopencl.array.zeros_like(self.eps)
         else:
@@ -355,23 +364,30 @@ class Simulation(object):
             return pyopencl.array.to_device(self.queue, vec(initial_value).astype(self.arg_type))
 
 
-def type_to_C(float_type: numpy.dtype) -> str:
+def type_to_C(
+        float_type: Type,
+        ) -> str:
     """
     Returns a string corresponding to the C equivalent of a numpy type.
     Only works for float16, float32, float64.
 
-    :param float_type: e.g. numpy.float32
-    :return: string containing the corresponding C type (eg. 'double')
+    Args:
+        float_type: e.g. numpy.float32
+
+    Returns:
+        string containing the corresponding C type (eg. 'double')
     """
-    if float_type == numpy.float16:
-        arg_type = 'half'
-    elif float_type == numpy.float32:
-        arg_type = 'float'
-    elif float_type == numpy.float64:
-        arg_type = 'double'
-    else:
-        raise Exception('Unsupported type')
-    return arg_type
+    types = {
+        numpy.float16: 'half',
+        numpy.float32: 'float',
+        numpy.float64: 'double',
+        numpy.complex64: 'cfloat_t',
+        numpy.complex128: 'cdouble_t',
+    }
+    if float_type not in types:
+        raise Exception(f'Unsupported type: {float_type}')
+
+    return types[float_type]
 
 #            def par(x):
 #                scaling = ((x / (pml['thickness'])) ** pml['m'])

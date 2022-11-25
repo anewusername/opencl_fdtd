@@ -2,7 +2,7 @@ import unittest
 import numpy
 
 from opencl_fdtd import Simulation
-from fdfd_tools import fdtd
+from meanas import fdtd
 
 
 class BasicTests():
@@ -25,16 +25,18 @@ class BasicTests():
         dxes = self.dxes if self.dxes is not None else tuple(tuple(numpy.ones(s) for s in e0.shape[1:]) for _ in range(2))
         dV = numpy.prod(numpy.meshgrid(*dxes[0], indexing='ij'), axis=0)
         u0 = self.j_mag * self.j_mag / self.epsilon[self.src_mask] * dV[mask]
-        args = {'dxes': self.dxes,
-                'epsilon': self.epsilon}
+        args = {
+            'dxes': self.dxes,
+            'epsilon': self.epsilon,
+            }
 
         # Make sure initial energy and E dot J are correct
         energy0 = fdtd.energy_estep(h0=h0, e1=e0, h2=self.hs[1], **args)
         e_dot_j_0 = fdtd.delta_energy_j(j0=(e0 - 0) * self.epsilon, e1=e0, dxes=self.dxes)
         self.assertTrue(numpy.allclose(energy0[mask], u0))
-        self.assertFalse(energy0[~mask].any(), msg='energy0: {}'.format(energy0))
+        self.assertFalse(energy0[~mask].any(), msg=f'{energy0=}')
         self.assertTrue(numpy.allclose(e_dot_j_0[mask], u0))
-        self.assertFalse(e_dot_j_0[~mask].any(), msg='e_dot_j_0: {}'.format(e_dot_j_0))
+        self.assertFalse(e_dot_j_0[~mask].any(), msg=f'{e_dot_j_0=}')
 
 
     def test_energy_conservation(self):
@@ -47,22 +49,25 @@ class BasicTests():
             with self.subTest(i=ii):
                 u_hstep = fdtd.energy_hstep(e0=self.es[ii-1], h1=self.hs[ii], e2=self.es[ii], **args)
                 u_estep = fdtd.energy_estep(h0=self.hs[ii], e1=self.es[ii], h2=self.hs[ii + 1], **args)
-                self.assertTrue(numpy.allclose(u_hstep.sum(), u0), msg='u_hstep: {}\n{}'.format(u_hstep.sum(), numpy.rollaxis(u_hstep, -1)))
-                self.assertTrue(numpy.allclose(u_estep.sum(), u0), msg='u_estep: {}\n{}'.format(u_estep.sum(), numpy.rollaxis(u_estep, -1)))
+                self.assertTrue(numpy.allclose(u_hstep.sum(), u0), msg=f'u_hstep: {u_hstep.sum()}\n{numpy.moveaxis(u_hstep, -1, 0)}')
+                self.assertTrue(numpy.allclose(u_estep.sum(), u0), msg=f'u_estep: {u_estep.sum()}\n{numpy.moveaxis(u_estep, -1, 0)}')
 
 
     def test_poynting(self):
         for ii in range(1, 3):
             with self.subTest(i=ii):
                 s = fdtd.poynting(e=self.es[ii], h=self.hs[ii+1] + self.hs[ii])
+                sf = numpy.moveaxis(s, -1, 0)
+                ss = numpy.moveaxis(self.ss[ii], -1, 0)
                 self.assertTrue(numpy.allclose(s, self.ss[ii], rtol=1e-4),
-                                msg='From ExH:\n{}\nFrom sim.S:\n{}'.format(numpy.rollaxis(s, -1),
-                                                                            numpy.rollaxis(self.ss[ii], -1)))
+                                msg=f'From ExH:\n{sf}\nFrom sim.S:\n{ss}')
 
 
     def test_poynting_divergence(self):
-        args = {'dxes': self.dxes,
-                'epsilon': self.epsilon}
+        args = {
+            'dxes': self.dxes,
+            'epsilon': self.epsilon,
+            }
 
         dxes = self.dxes if self.dxes is not None else tuple(tuple(numpy.ones(s) for s in self.epsilon.shape[1:]) for _ in range(2))
         dV = numpy.prod(numpy.meshgrid(*dxes[0], indexing='ij'), axis=0)
@@ -75,9 +80,11 @@ class BasicTests():
 
                 du_half_h2e = u_estep - u_hstep
                 div_s_h2e = self.dt * fdtd.poynting_divergence(e=self.es[ii], h=self.hs[ii], dxes=self.dxes) * dV
+
+                du_half_h2e_f = numpy.moveaxis(du_half_h2e, -1, 0)
+                div_s_h2e_f = -numpy.moveaxis(div_s_h2e, -1, 0)
                 self.assertTrue(numpy.allclose(du_half_h2e, -div_s_h2e, rtol=1e-4),
-                                msg='du_half_h2e\n{}\ndiv_s_h2e\n{}'.format(numpy.rollaxis(du_half_h2e, -1),
-                                                                           -numpy.rollaxis(div_s_h2e, -1)))
+                                msg=f'du_half_h2e\n{du_half_h2e_f}\ndiv_s_h2e\n{div_s_h2e_f}')
 
                 if u_eprev is None:
                     u_eprev = u_estep
@@ -86,15 +93,18 @@ class BasicTests():
                 # previous half-step
                 du_half_e2h = u_hstep - u_eprev
                 div_s_e2h = self.dt * fdtd.poynting_divergence(e=self.es[ii-1], h=self.hs[ii], dxes=self.dxes) * dV
+                du_half_e2h_f = numpy.moveaxis(du_half_e2h, -1, 0)
+                div_s_e2h_f = -numpy.moveaxis(div_s_e2h, -1, 0)
                 self.assertTrue(numpy.allclose(du_half_e2h, -div_s_e2h, rtol=1e-4),
-                                msg='du_half_e2h\n{}\ndiv_s_e2h\n{}'.format(numpy.rollaxis(du_half_e2h, -1),
-                                                                           -numpy.rollaxis(div_s_e2h, -1)))
+                                msg=f'du_half_e2h\n{du_half_e2h_f}\ndiv_s_e2h\n{div_s_e2h_f}')
                 u_eprev = u_estep
 
 
     def test_poynting_planes(self):
-        args = {'dxes': self.dxes,
-                'epsilon': self.epsilon}
+        args = {
+            'dxes': self.dxes,
+            'epsilon': self.epsilon,
+            }
         dxes = self.dxes if self.dxes is not None else tuple(tuple(numpy.ones(s) for s in self.epsilon.shape[1:]) for _ in range(2))
         dV = numpy.prod(numpy.meshgrid(*dxes[0], indexing='ij'), axis=0)
 
@@ -118,8 +128,9 @@ class BasicTests():
                 planes = [s_h2e[px].sum(), -s_h2e[mx].sum(),
                           s_h2e[py].sum(), -s_h2e[my].sum(),
                           s_h2e[pz].sum(), -s_h2e[mz].sum()]
+                du = (u_estep - u_hstep)[self.src_mask[1]]
                 self.assertTrue(numpy.allclose(sum(planes), (u_estep - u_hstep)[self.src_mask[1]]),
-                                msg='planes: {} (sum: {})\n du:\n {}'.format(planes, sum(planes), (u_estep - u_hstep)[self.src_mask[1]]))
+                                msg=f'planes: {planes} (sum: {sum(planes)})\n du:\n {du}')
 
                 if u_eprev is None:
                     u_eprev = u_estep
@@ -132,13 +143,12 @@ class BasicTests():
                 planes = [s_e2h[px].sum(), -s_e2h[mx].sum(),
                           s_e2h[py].sum(), -s_e2h[my].sum(),
                           s_e2h[pz].sum(), -s_e2h[mz].sum()]
+                du = (u_hstep - u_eprev)[self.src_mask[1]]
                 self.assertTrue(numpy.allclose(sum(planes), (u_hstep - u_eprev)[self.src_mask[1]]),
-                                msg='planes: {} (sum: {})\n du:\n {}'.format(planes, sum(planes), (u_hstep - u_eprev)[self.src_mask[1]]))
+                                msg=f'planes: {du} (sum: {sum(planes)})\n du:\n {du}')
 
                 # previous half-step
                 u_eprev = u_estep
-
-
 
 
 class Basic2DNoDXOnlyVacuum(unittest.TestCase, BasicTests):
@@ -348,8 +358,10 @@ class JdotE_3DUniformDX(unittest.TestCase):
         e1 = self.es[2]
         j0 = numpy.zeros_like(e0)
         j0[self.src_mask] = self.j_mag
-        args = {'dxes': self.dxes,
-                'epsilon': self.epsilon}
+        args = {
+            'dxes': self.dxes,
+            'epsilon': self.epsilon,
+            }
         e2h = fdtd.maxwell_h(dt=self.dt, dxes=self.dxes)
 
         #ee = j0 * (2 * e0 - j0)
@@ -365,4 +377,5 @@ class JdotE_3DUniformDX(unittest.TestCase):
         u_hstep = fdtd.energy_hstep(e0=self.es[0], h1=self.hs[1], e2=self.es[1], **args)
         u_estep = fdtd.energy_estep(h0=self.hs[-2], e1=self.es[-2], h2=self.hs[-1], **args)
         #breakpoint()
-        self.assertTrue(numpy.allclose(u0.sum(), (u_estep - u_hstep).sum()), msg='{} != {}'.format(u0.sum(), (u_estep - u_hstep).sum()))
+        du = (u_estep - u_hstep).sum()
+        self.assertTrue(numpy.allclose(u0.sum(), (u_estep - u_hstep).sum()), msg=f'{u0.sum()} != {du}')

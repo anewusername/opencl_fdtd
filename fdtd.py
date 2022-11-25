@@ -30,55 +30,64 @@ def perturbed_l3(a: float, radius: float, **kwargs) -> Pattern:
     """
     Generate a masque.Pattern object containing a perturbed L3 cavity.
 
-    :param a: Lattice constant.
-    :param radius: Hole radius, in units of a (lattice constant).
-    :param kwargs: Keyword arguments:
-        hole_dose, trench_dose, hole_layer, trench_layer: Shape properties for Pattern.
-                Defaults *_dose=1, hole_layer=0, trench_layer=1.
-        shifts_a, shifts_r: passed to pcgen.l3_shift; specifies lattice constant (1 -
-                multiplicative factor) and radius (multiplicative factor) for shifting
-                holes adjacent to the defect (same row). Defaults are 0.15 shift for
-                first hole, 0.075 shift for third hole, and no radius change.
+    Args:
+        a: Lattice constant.
+        radius: Hole radius, in units of a (lattice constant).
+        hole_dose: Dose for all holes. Default 1.
+        trench_dose: Dose for undercut trenches. Default 1.
+        hole_layer: Layer for holes. Default (0, 0).
+        trench_layer: Layer for undercut trenches. Default (1, 0).
+        shifts_a: passed to pcgen.l3_shift
+        shifts_r: passed to pcgen.l3_shift
         xy_size: [x, y] number of mirror periods in each direction; total size is
-                2 * n + 1 holes in each direction. Default [10, 10].
+                2 * n + 1 holes in each direction. Default (10, 10).
         perturbed_radius: radius of holes perturbed to form an upwards-driected beam
                 (multiplicative factor). Default 1.1.
         trench width: Width of the undercut trenches. Default 1.2e3.
-    :return: masque.Pattern object containing the L3 design
+
+    Returns:
+        `masque.Pattern` object containing the L3 design
     """
 
-    default_args = {'hole_dose':    1,
-                    'trench_dose':  1,
-                    'hole_layer':   0,
-                    'trench_layer': 1,
-                    'shifts_a':     (0.15, 0, 0.075),
-                    'shifts_r':     (1.0, 1.0, 1.0),
-                    'xy_size':      (10, 10),
-                    'perturbed_radius': 1.1,
-                    'trench_width': 1.2e3,
-                    }
+    default_args = {
+        'hole_dose':    1,
+        'trench_dose':  1,
+        'hole_layer':   0,
+        'trench_layer': 1,
+        'shifts_a':     (0.15, 0, 0.075),
+        'shifts_r':     (1.0, 1.0, 1.0),
+        'xy_size':      (10, 10),
+        'perturbed_radius': 1.1,
+        'trench_width': 1.2e3,
+        }
     kwargs = {**default_args, **kwargs}
 
-    xyr = pcgen.l3_shift_perturbed_defect(mirror_dims=kwargs['xy_size'],
-                                          perturbed_radius=kwargs['perturbed_radius'],
-                                          shifts_a=kwargs['shifts_a'],
-                                          shifts_r=kwargs['shifts_r'])
+    xyr = pcgen.l3_shift_perturbed_defect(
+        mirror_dims=kwargs['xy_size'],
+        perturbed_radius=kwargs['perturbed_radius'],
+        shifts_a=kwargs['shifts_a'],
+        shifts_r=kwargs['shifts_r'],
+        )
     xyr *= a
     xyr[:, 2] *= radius
 
     pat = Pattern()
-    pat.name = 'L3p-a{:g}r{:g}rp{:g}'.format(a, radius, kwargs['perturbed_radius'])
+    pat.name = f'L3p-a{a:g}r{radius:g}rp{kwargs["perturbed_radius"]:g}'
     pat.shapes += [shapes.Circle(radius=r, offset=(x, y),
                                  dose=kwargs['hole_dose'],
                                  layer=kwargs['hole_layer'])
                    for x, y, r in xyr]
 
     maxes = numpy.max(numpy.fabs(xyr), axis=0)
-    pat.shapes += [shapes.Polygon.rectangle(
-        lx=(2 * maxes[0]), ly=kwargs['trench_width'],
-        offset=(0, s * (maxes[1] + a + kwargs['trench_width'] / 2)),
-        dose=kwargs['trench_dose'], layer=kwargs['trench_layer'])
-                   for s in (-1, 1)]
+    pat.shapes += [
+        shapes.Polygon.rectangle(
+            lx=(2 * maxes[0]),
+            ly=kwargs['trench_width'],
+            offset=(0, s * (maxes[1] + a + kwargs['trench_width'] / 2)),
+            dose=kwargs['trench_dose'],
+            layer=kwargs['trench_layer'],
+            )
+        for s in (-1, 1)]
     return pat
 
 
@@ -226,7 +235,8 @@ def main():
 #                                                                                            pml_thickness+m:-pml_thickness-m, :].sum() * dx * dx * dx
 
         if t % 100 == 0:
-            logger.info('iteration {}: average {} iterations per sec'.format(t, (t+1)/(time.perf_counter()-start)))
+            avg = (t + 1) / (time.perf_counter() - start)
+            logger.info(f'iteration {t}: average {avg} iterations per sec')
             sys.stdout.flush()
 
     with lzma.open('saved_simulation', 'wb') as f:
