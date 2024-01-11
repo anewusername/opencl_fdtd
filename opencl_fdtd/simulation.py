@@ -2,7 +2,7 @@
 Class for constructing and holding the basic FDTD operations and fields
 """
 
-from typing import List, Dict, Callable, Type, Union, Optional, Sequence
+from typing import Callable, Type, Sequence
 from collections import OrderedDict
 import numpy
 from numpy.typing import NDArray
@@ -62,29 +62,29 @@ class Simulation(object):
     S: pyopencl.array.Array
     eps: pyopencl.array.Array
     dt: float
-    inv_dxes: List[pyopencl.array.Array]
+    inv_dxes: list[pyopencl.array.Array]
 
     arg_type: Type
 
     context: pyopencl.Context
     queue: pyopencl.CommandQueue
 
-    update_E: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    update_H: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    update_S: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    update_J: Callable[[List[pyopencl.Event]], pyopencl.Event]
-    sources: Dict[str, str]
+    update_E: Callable[[list[pyopencl.Event]], pyopencl.Event]
+    update_H: Callable[[list[pyopencl.Event]], pyopencl.Event]
+    update_S: Callable[[list[pyopencl.Event]], pyopencl.Event]
+    update_J: Callable[[list[pyopencl.Event]], pyopencl.Event]
+    sources: dict[str, str]
 
     def __init__(
             self,
             epsilon: NDArray,
-            pmls: Sequence[Dict[str, float]],
-            bloch_boundaries: Sequence[Dict[str, float]] = (),
-            dxes: Union[List[List[NDArray]], float, None] = None,
-            dt: Optional[float] = None,
-            initial_fields: Optional[Dict[str, NDArray]] = None,
-            context: Optional[pyopencl.Context] = None,
-            queue: Optional[pyopencl.CommandQueue] = None,
+            pmls: Sequence[dict[str, float]],
+            bloch_boundaries: Sequence[dict[str, float]] = (),
+            dxes: list[list[NDArray]] | float | None = None,
+            dt: float | None = None,
+            initial_fields: dict[str, NDArray] | None = None,
+            context: pyopencl.Context | None = None,
+            queue: pyopencl.CommandQueue | None = None,
             float_type: Type = numpy.float32,
             do_poynting: bool = True,
             do_fieldsrc: bool = False,
@@ -331,8 +331,8 @@ class Simulation(object):
 
     def _create_context(
             self,
-            context: Optional[pyopencl.Context] = None,
-            queue: Optional[pyopencl.CommandQueue] = None,
+            context: pyopencl.Context | None = None,
+            queue: pyopencl.CommandQueue | None = None,
             ) -> None:
         if context is None:
             self.context = pyopencl.create_some_context()
@@ -353,7 +353,7 @@ class Simulation(object):
             raise Exception(f'Epsilon shape mismatch. Expected {self.shape}, got {epsilon[0].shape}')
         self.eps = pyopencl.array.to_device(self.queue, vec(epsilon).astype(self.arg_type))
 
-    def _create_field(self, initial_value: Optional[NDArray] = None) -> pyopencl.array.Array:
+    def _create_field(self, initial_value: NDArray | None = None) -> pyopencl.array.Array:
         if initial_value is None:
             return pyopencl.array.zeros_like(self.eps)
         else:
