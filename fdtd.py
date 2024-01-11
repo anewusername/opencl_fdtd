@@ -230,9 +230,9 @@ def main():
         Ectr[t] = sim.E[ind].get()
         u[t] = pyopencl.array.sum(sim.E * sim.E * sim.eps + h_old * sim.H).get() * dx * dx * dx
         ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(epsilon.shape).get()[:, pml_thickness+m:-pml_thickness-m, :,
-                                                                                            pml_thickness+m:-pml_thickness-m].sum() * dx * dx * dx
+                                                                                          pml_thickness+m:-pml_thickness-m].sum() * dx * dx * dx
 #        ui[t] = (sim.E * sim.E * sim.eps + h_old * sim.H).reshape(epsilon.shape).get()[:, pml_thickness+m:-pml_thickness-m,
-#                                                                                            pml_thickness+m:-pml_thickness-m, :].sum() * dx * dx * dx
+#                                                                                          pml_thickness+m:-pml_thickness-m, :].sum() * dx * dx * dx
 
         if t % 100 == 0:
             avg = (t + 1) / (time.perf_counter() - start)
