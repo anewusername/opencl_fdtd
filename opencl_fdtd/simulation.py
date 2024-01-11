@@ -23,7 +23,7 @@ __author__ = 'Jan Petykiewicz'
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__.split('.')[0], 'kernels'))
 
 
-class Simulation(object):
+class Simulation:
     r"""
     Constructs and holds the basic FDTD operations and related fields
 
