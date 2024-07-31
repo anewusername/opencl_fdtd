@@ -32,10 +32,10 @@ classifiers = [
     "License :: OSI Approved :: GNU Affero General Public License v3",
     "Topic :: Scientific/Engineering",
     ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dynamic = ["version"]
 dependencies = [
-    "numpy~=1.21",
+    "numpy>=1.26",
     "pyopencl",
     "jinja2",
     "meanas>=0.3",
