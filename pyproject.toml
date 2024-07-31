@@ -44,3 +44,50 @@ dependencies = [
 [tool.hatch.version]
 path = "opencl_fdtd/__init__.py"
 
+
+[tool.ruff]
+exclude = [
+    ".git",
+    "dist",
+    ]
+line-length = 145
+indent-width = 4
+lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+lint.select = [
+    "NPY", "E", "F", "W", "B", "ANN", "UP", "SLOT", "SIM", "LOG",
+    "C4", "ISC", "PIE", "PT", "RET", "TCH", "PTH", "INT",
+    "ARG", "PL", "R", "TRY",
+    "G010", "G101", "G201", "G202",
+    "Q002", "Q003", "Q004",
+    ]
+lint.ignore = [
+    #"ANN001",   # No annotation
+    "ANN002",   # *args
+    "ANN003",   # **kwargs
+    "ANN401",   # Any
+    "ANN101",   # self: Self
+    "SIM108",   # single-line if / else assignment
+    "RET504",   # x=y+z; return x
+    "PIE790",   # unnecessary pass
+    "ISC003",   # non-implicit string concatenation
+    "C408",     # dict(x=y) instead of {'x': y}
+    "PLR09",    # Too many xxx
+    "PLR2004",  # magic number
+    "PLC0414",  # import x as x
+    "TRY003",   # Long exception message
+    ]
+
+
+[[tool.mypy.overrides]]
+module = [
+    "scipy",
+    "scipy.optimize",
+    "scipy.linalg",
+    "scipy.sparse",
+    "scipy.sparse.linalg",
+    "pyopencl",
+    "pyopencl.array",
+    "pyopencl.elementwise",
+    "pyopencl.reduction",
+    ]
+ignore_missing_imports = true
