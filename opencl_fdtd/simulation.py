@@ -143,9 +143,12 @@ class Simulation:
         if isinstance(dxes, float | int):
             uniform_dx = dxes
             min_dx = dxes
+        elif all((dxes[0][0][0] == dx).all() for dx in dxes[0] + dxes[1]):
+            uniform_dx = dxes[0][0][0]
+            min_dx = dxes[0][0][0]
         else:
             uniform_dx = False
-            self.inv_dxes = [self._create_field(1 / dxn) for dxn in dxes[0] + dxes[1]]
+            self.inv_dxes = self._create_inv_dxes(dxes)
             min_dx = min(min(dxn) for dxn in dxes[0] + dxes[1])
 
         max_dt = min_dx * .99 / numpy.sqrt(3)
@@ -370,6 +373,17 @@ class Simulation:
         if not all(f.shape == self.shape for f in initial_value):
             raise FDTDError('Initial field list elements must have same shape as epsilon elements')
         return pyopencl.array.to_device(self.queue, vec(initial_value).astype(self.arg_type))
+
+    def _create_inv_dxes(self, dxes: list[list[NDArray]]) -> pyopencl.array.Array:
+        if len(dxes[0]) or len(dxes[1]) != 3:
+            raise FDTDError('dxes must be two lists of 3 1D ndarrays each')
+        if self.shape != tuple(len(dx) for dx in dxes[0]):
+            raise FDTDError('dxes must be compatible with shape of epsilon')
+        if self.shape != tuple(len(dx) for dx in dxes[1]):
+            raise FDTDError('dxes must be compatible with shape of epsilon')
+        self.inv_dxes = [
+            pyopencl.array.to_device(self.queue, (1 / dxn).astype(self.arg_type))
+            for dxn in chain(dxes[0], dxes[1])]
 
 
 def type_to_C(
